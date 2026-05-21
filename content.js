@@ -198,11 +198,9 @@
         input.textContent = answer;
         input.dispatchEvent(new Event("input", { bubbles: true }));
       } else {
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-          window.HTMLInputElement.prototype, "value"
-        )?.set || Object.getOwnPropertyDescriptor(
-          window.HTMLTextAreaElement.prototype, "value"
-        )?.set;
+        const nativeInputValueSetter = input instanceof HTMLTextAreaElement
+          ? Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set
+          : Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
 
         if (nativeInputValueSetter) {
           nativeInputValueSetter.call(input, answer);
@@ -278,7 +276,7 @@
     ];
 
     for (const pattern of letterPatterns) {
-      if (text.startsWith(pattern) || text.includes(pattern)) {
+      if (text.startsWith(pattern)) {
         return true;
       }
     }
@@ -301,12 +299,10 @@
 
   function clickElement(option) {
     const el = option.input || option.element;
-    // Dispatch a real click
-    el.click();
-    // Also dispatch mouse events for frameworks that listen on these
+    // Dispatch mouse events in natural order for frameworks that listen on these
     el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-    el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    el.click();
 
     // For inputs, ensure change event fires
     if (option.input) {
