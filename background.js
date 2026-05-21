@@ -3,15 +3,16 @@
  *
  * Handles:
  * 1. Screenshot capture via chrome.tabs.captureVisibleTab
- * 2. AI vision API call (OpenAI GPT-4o)
+ * 2. Backend API call for AI-powered answers
  * 3. Message routing between content script and popup
  */
+
+const API_BASE_URL = "https://44a940115329-tunnel-ktznozzt.devinapps.com";
+const API_AUTH = "Basic " + btoa("user:be68d497b75fa20a5357ef2d5ac88d1d");
 
 const DEFAULT_SETTINGS = {
   enabled: true,
   displayMode: "homework", // "invisible" | "sneaky" | "homework"
-  apiKey: "",
-  model: "gpt-4o",
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -32,97 +33,22 @@ async function captureScreenshot() {
   return dataUrl;
 }
 
-function buildPrompt(selectedText) {
-  const contextHint = selectedText
-    ? `The user double-clicked near this text: "${selectedText}"\n\n`
-    : "";
-
-  return `${contextHint}You are an expert tutor. Look at this screenshot of a question (exam, quiz, homework, etc.).
-
-Your job:
-1. Identify the question(s) visible on screen.
-2. Determine the correct answer(s).
-3. Return a JSON response so the extension can AUTO-CLICK the correct answer.
-
-You MUST respond with valid JSON in this exact format:
-{
-  "type": "multiple_choice" | "multiple_select" | "fill_in_blank" | "short_answer" | "matching",
-  "answer": "the answer text",
-  "letter": "C",
-  "letters": ["A", "C"],
-  "answerText": "the full text of the correct option"
-}
-
-Rules:
-- For multiple choice: set type="multiple_choice", letter to the correct letter (A/B/C/D), and answerText to the full option text (e.g. "2x + 2")
-- For multiple select: set type="multiple_select", letters to array of correct letters, and answerText to comma-separated correct option texts
-- For fill-in-the-blank: set type="fill_in_blank", answer to the value to type
-- For short answer / essay: set type="short_answer", answer to the full response
-- For matching: set type="matching", answer to the pairs description
-- Always set "answer" to a human-readable string of the answer regardless of type
-- If you cannot determine the answer with confidence, prefix answer with "Uncertain: "
-- Return ONLY the JSON object. No markdown, no backticks, no explanation.`;
-}
-
-async function queryAI(screenshotDataUrl, selectedText, settings) {
-  if (!settings.apiKey) {
-    throw new Error("API key not set. Open the AnswerSnap popup to configure.");
-  }
-
-  const base64Image = screenshotDataUrl.split(",")[1];
-
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+async function queryBackend(screenshotDataUrl, selectedText) {
+  const response = await fetch(`${API_BASE_URL}/answer`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${settings.apiKey}`,
-    },
+    headers: { "Content-Type": "application/json", "Authorization": API_AUTH },
     body: JSON.stringify({
-      model: settings.model,
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: buildPrompt(selectedText),
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/png;base64,${base64Image}`,
-                detail: "high",
-              },
-            },
-          ],
-        },
-      ],
+      screenshot: screenshotDataUrl,
+      selectedText: selectedText || "",
     }),
   });
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(
-      `OpenAI API error: ${response.status} — ${err.error?.message || response.statusText}`
-    );
+    throw new Error(err.detail || `Server error: ${response.status}`);
   }
 
-  const data = await response.json();
-  const rawContent = data.choices?.[0]?.message?.content?.trim() || "";
-
-  if (!rawContent) return { type: "short_answer", answer: "No answer returned." };
-
-  // Try to parse as JSON for structured auto-click support
-  try {
-    const cleaned = rawContent.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
-    const parsed = JSON.parse(cleaned);
-    if (parsed && parsed.answer) return parsed;
-  } catch {
-    // AI returned plain text — wrap it in a simple structure
-  }
-
-  return { type: "short_answer", answer: rawContent };
+  return await response.json();
 }
 
 // ── Message Handler ─────────────────────────────────────────────────────────
@@ -163,7 +89,7 @@ async function handleAnswerRequest(message, sendResponse) {
     }
 
     const screenshot = message.screenshot || await captureScreenshot();
-    const result = await queryAI(screenshot, message.selectedText, settings);
+    const result = await queryBackend(screenshot, message.selectedText);
 
     sendResponse({
       answer: result.answer,
