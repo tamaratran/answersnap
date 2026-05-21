@@ -1,0 +1,252 @@
+/* AnswerSnap — Popup Styles */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 320px;
+  background: #0f0f1a;
+  color: #e2e8f0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.popup {
+  padding: 16px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-text {
+  font-size: 16px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Toggle */
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.toggle input {
+  display: none;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: #374151;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #e2e8f0;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.toggle input:checked + .toggle-slider {
+  background: #6366f1;
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+/* Sections */
+.section {
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+/* Input */
+.input-group {
+  display: flex;
+  gap: 6px;
+}
+
+.input-group input {
+  flex: 1;
+  background: #1e1e32;
+  border: 1px solid #2d2d4a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e2e8f0;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.input-group input:focus {
+  border-color: #6366f1;
+}
+
+.input-group input::placeholder {
+  color: #4b5563;
+}
+
+.icon-btn {
+  background: #1e1e32;
+  border: 1px solid #2d2d4a;
+  border-radius: 8px;
+  padding: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.icon-btn:hover {
+  color: #e2e8f0;
+  border-color: #6366f1;
+}
+
+/* Mode buttons */
+.mode-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: #1e1e32;
+  border: 1px solid #2d2d4a;
+  border-radius: 10px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.mode-btn span {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mode-btn small {
+  font-size: 9px;
+  color: #4b5563;
+}
+
+.mode-btn:hover {
+  border-color: #6366f1;
+  color: #e2e8f0;
+}
+
+.mode-btn.active {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+  color: #818cf8;
+}
+
+.mode-btn.active small {
+  color: #6366f1;
+}
+
+/* Select */
+select {
+  width: 100%;
+  background: #1e1e32;
+  border: 1px solid #2d2d4a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+select:focus {
+  border-color: #6366f1;
+}
+
+select option {
+  background: #1e1e32;
+  color: #e2e8f0;
+}
+
+/* Footer */
+.footer {
+  padding-top: 12px;
+  border-top: 1px solid #1e1e32;
+}
+
+.status {
+  font-size: 12px;
+  margin-bottom: 8px;
+  min-height: 16px;
+}
+
+.status.success {
+  color: #34d399;
+}
+
+.status.error {
+  color: #f87171;
+}
+
+.shortcut {
+  font-size: 10px;
+  color: #4b5563;
+  text-align: center;
+}
+
+kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  background: #1e1e32;
+  border: 1px solid #2d2d4a;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 10px;
+}

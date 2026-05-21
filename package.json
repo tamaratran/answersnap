@@ -1,0 +1,25 @@
+{
+  "name": "answersnap",
+  "version": "1.0.0",
+  "description": "AI-powered Chrome extension for instant answers. Double-click any question to get the answer.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint '**/*.js' --ignore-pattern 'node_modules/' --ignore-pattern 'landing/'",
+    "typecheck": "echo 'No TypeScript in this project'",
+    "dev:landing": "cd landing && python3 -m http.server 8080",
+    "build": "echo 'No build step needed — plain JS Chrome extension'"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  },
+  "keywords": [
+    "chrome-extension",
+    "ai",
+    "gpt-4o",
+    "vision",
+    "answers",
+    "education"
+  ],
+  "license": "MIT"
+}
