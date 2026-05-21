@@ -146,7 +146,18 @@
 
     isLoading = true;
 
-    // Get display mode first
+    // Capture screenshot BEFORE showing the loading overlay so it doesn't
+    // appear in the image sent to the AI.
+    let screenshot;
+    try {
+      screenshot = await sendMessage({ type: "CAPTURE_SCREENSHOT" });
+    } catch {
+      showError("Failed to capture screenshot.");
+      isLoading = false;
+      return;
+    }
+
+    // Now show the loading indicator
     try {
       const settings = await sendMessage({ type: "GET_SETTINGS" });
       showLoading(settings.displayMode);
@@ -158,6 +169,7 @@
       const response = await sendMessage({
         type: "ANSWER_REQUEST",
         selectedText,
+        screenshot,
       });
 
       if (response.error) {

@@ -1,1 +1,6 @@
-node_modules/\ndist/\n.env\n*.crx\n*.pem\n*.zip
+node_modules/
+dist/
+.env
+*.crx
+*.pem
+*.zip

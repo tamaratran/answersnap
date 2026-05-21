@@ -106,9 +106,16 @@ async function queryAI(screenshotDataUrl, selectedText, settings) {
 // ── Message Handler ─────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === "CAPTURE_SCREENSHOT") {
+    captureScreenshot().then(sendResponse).catch((err) => {
+      sendResponse({ error: err.message });
+    });
+    return true;
+  }
+
   if (message.type === "ANSWER_REQUEST") {
     handleAnswerRequest(message, sendResponse);
-    return true; // keep channel open for async response
+    return true;
   }
 
   if (message.type === "GET_SETTINGS") {
@@ -133,7 +140,7 @@ async function handleAnswerRequest(message, sendResponse) {
       return;
     }
 
-    const screenshot = await captureScreenshot();
+    const screenshot = message.screenshot || await captureScreenshot();
     const answer = await queryAI(screenshot, message.selectedText, settings);
 
     sendResponse({ answer, displayMode: settings.displayMode });
