@@ -16,12 +16,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-2.0-flash"
-GEMINI_URL = (
-    f"https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
-)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_MODEL = "gpt-4o"
+OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 
 class AnswerRequest(BaseModel):
@@ -60,55 +57,53 @@ def build_prompt(selected_text: str) -> str:
 
 @app.post("/answer", response_model=AnswerResponse)
 async def get_answer(req: AnswerRequest):
-    if not GEMINI_API_KEY:
+    if not OPENAI_API_KEY:
         raise HTTPException(status_code=500, detail="API key not configured")
 
     prompt = build_prompt(req.selectedText)
 
-    # Extract base64 data from data URL
+    # Build image content from screenshot
     screenshot_data = req.screenshot
-    if screenshot_data.startswith("data:"):
-        # Format: data:image/png;base64,<data>
-        parts = screenshot_data.split(",", 1)
-        mime_type = parts[0].split(":")[1].split(";")[0]
-        image_data = parts[1]
-    else:
-        mime_type = "image/png"
-        image_data = screenshot_data
+    if not screenshot_data.startswith("data:"):
+        screenshot_data = f"data:image/png;base64,{screenshot_data}"
 
     payload = {
-        "contents": [
+        "model": OPENAI_MODEL,
+        "messages": [
             {
-                "parts": [
-                    {"text": prompt},
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
                     {
-                        "inline_data": {
-                            "mime_type": mime_type,
-                            "data": image_data,
-                        }
+                        "type": "image_url",
+                        "image_url": {"url": screenshot_data},
                     },
-                ]
+                ],
             }
         ],
-        "generationConfig": {
-            "maxOutputTokens": 500,
-        },
+        "max_tokens": 500,
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.post(
-            GEMINI_URL,
-            headers={"Content-Type": "application/json"},
+            OPENAI_URL,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+            },
             json=payload,
         )
 
     if resp.status_code != 200:
-        detail = resp.json().get("error", {}).get("message", resp.text)
+        try:
+            detail = resp.json().get("error", {}).get("message", resp.text)
+        except Exception:
+            detail = resp.text
         raise HTTPException(status_code=resp.status_code, detail=detail)
 
     data = resp.json()
     raw_content = (
-        data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        data["choices"][0]["message"]["content"].strip()
     )
 
     # Strip markdown code fences if present
