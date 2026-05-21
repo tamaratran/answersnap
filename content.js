@@ -134,6 +134,184 @@
     return div.innerHTML;
   }
 
+  // ── Auto-Click Logic ────────────────────────────────────────────────────
+
+  function autoClickAnswer(response, clickTarget) {
+    const { type, letter, letters, answerText, answer } = response;
+
+    if (type === "multiple_choice" && letter) {
+      return clickMultipleChoice(letter, answerText, clickTarget);
+    }
+
+    if (type === "multiple_select" && letters && letters.length > 0) {
+      return clickMultipleSelect(letters, answerText, clickTarget);
+    }
+
+    if (type === "fill_in_blank" && answer) {
+      return fillInBlank(answer, clickTarget);
+    }
+
+    return false;
+  }
+
+  function clickMultipleChoice(letter, answerText, clickTarget) {
+    // Find the question container — look up from click target
+    const container = findQuestionContainer(clickTarget);
+    const options = findOptionElements(container);
+
+    for (const option of options) {
+      if (matchesOption(option, letter, answerText)) {
+        clickElement(option);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function clickMultipleSelect(letters, _answerText, clickTarget) {
+    const container = findQuestionContainer(clickTarget);
+    const options = findOptionElements(container);
+    let clicked = false;
+
+    for (const option of options) {
+      for (const letter of letters) {
+        if (matchesOption(option, letter, null)) {
+          clickElement(option);
+          clicked = true;
+          break;
+        }
+      }
+    }
+    return clicked;
+  }
+
+  function fillInBlank(answer, clickTarget) {
+    // Find nearest input/textarea to the click target
+    const container = findQuestionContainer(clickTarget);
+    const inputs = container.querySelectorAll(
+      'input[type="text"], input:not([type]), textarea, [contenteditable="true"]'
+    );
+
+    if (inputs.length > 0) {
+      const input = inputs[0];
+      if (input.getAttribute("contenteditable") === "true") {
+        input.textContent = answer;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      } else {
+        const nativeInputValueSetter = input instanceof HTMLTextAreaElement
+          ? Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set
+          : Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+
+        if (nativeInputValueSetter) {
+          nativeInputValueSetter.call(input, answer);
+        } else {
+          input.value = answer;
+        }
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function findQuestionContainer(el) {
+    // Walk up the DOM to find a container that likely holds the question + options
+    let current = el;
+    const containerSelectors = [
+      "[class*='question']", "[class*='Question']",
+      "[class*='problem']", "[class*='Problem']",
+      "[role='group']", "[role='radiogroup']",
+      "fieldset", "form",
+      "[class*='quiz']", "[class*='Quiz']",
+      "[class*='item']", "[class*='card']",
+    ];
+
+    for (let i = 0; i < 10 && current && current !== document.body; i++) {
+      for (const sel of containerSelectors) {
+        if (current.matches(sel)) return current;
+      }
+      // If current element contains multiple radio/checkbox inputs, it's likely the container
+      const inputs = current.querySelectorAll('input[type="radio"], input[type="checkbox"]');
+      if (inputs.length >= 2) return current;
+      current = current.parentElement;
+    }
+
+    // Fallback: return a wide area around the click
+    return el.closest("form") || el.closest("fieldset") || el.closest("section") || document.body;
+  }
+
+  function findOptionElements(container) {
+    // Gather all clickable option-like elements
+    const options = [];
+
+    // Radio buttons and checkboxes (with labels)
+    const inputs = container.querySelectorAll('input[type="radio"], input[type="checkbox"]');
+    for (const input of inputs) {
+      const label = input.closest("label") || container.querySelector(`label[for="${input.id}"]`);
+      options.push({ element: label || input, input, text: (label || input.parentElement)?.textContent?.trim() || "" });
+    }
+
+    // If no inputs found, look for clickable option elements (custom UIs)
+    if (options.length === 0) {
+      const optionEls = container.querySelectorAll(
+        '[class*="option"], [class*="answer"], [class*="choice"], [role="option"], [role="radio"], li'
+      );
+      for (const el of optionEls) {
+        options.push({ element: el, input: null, text: el.textContent?.trim() || "" });
+      }
+    }
+
+    return options;
+  }
+
+  function matchesOption(option, letter, answerText) {
+    const text = option.text.toLowerCase();
+    const letterLower = letter.toLowerCase();
+
+    // Match by letter prefix: "A.", "A)", "A ", "(A)"
+    const letterPatterns = [
+      `${letterLower}.`, `${letterLower})`, `(${letterLower})`,
+      `${letterLower} `, `${letter}.`, `${letter})`, `(${letter})`,
+    ];
+
+    for (const pattern of letterPatterns) {
+      if (text.startsWith(pattern)) {
+        return true;
+      }
+    }
+
+    // Match by answer text content
+    if (answerText && text.includes(answerText.toLowerCase())) {
+      return true;
+    }
+
+    // Match by input value attribute
+    if (option.input) {
+      const val = (option.input.value || "").toLowerCase();
+      if (val === letterLower || val === answerText?.toLowerCase()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function clickElement(option) {
+    const el = option.input || option.element;
+    // Dispatch mouse events in natural order for frameworks that listen on these
+    el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    el.click();
+
+    // For inputs, ensure change event fires
+    if (option.input) {
+      option.input.checked = true;
+      option.input.dispatchEvent(new Event("change", { bubbles: true }));
+      option.input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+
   // ── Double-Click Handler ────────────────────────────────────────────────
 
   document.addEventListener("dblclick", async (e) => {
@@ -143,6 +321,7 @@
     if (e.target.closest("#answersnap-overlay")) return;
 
     const selectedText = window.getSelection()?.toString()?.trim() || "";
+    const clickTarget = e.target;
 
     isLoading = true;
 
@@ -158,9 +337,11 @@
     }
 
     // Now show the loading indicator
+    let displayMode = "homework";
     try {
       const settings = await sendMessage({ type: "GET_SETTINGS" });
-      showLoading(settings.displayMode);
+      displayMode = settings.displayMode;
+      showLoading(displayMode);
     } catch {
       showLoading("homework");
     }
@@ -175,7 +356,16 @@
       if (response.error) {
         showError(response.error);
       } else {
-        showAnswer(response.answer, response.displayMode);
+        // Try to auto-click the correct answer
+        const clicked = autoClickAnswer(response, clickTarget);
+
+        if (clicked) {
+          showToast("Answer selected!");
+          hideOverlay();
+        } else {
+          // Fallback: show the answer in overlay (for non-clickable questions)
+          showAnswer(response.answer, response.displayMode);
+        }
       }
     } catch (_err) {
       showError("Failed to get answer. Check your settings.");

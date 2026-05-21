@@ -42,17 +42,26 @@ function buildPrompt(selectedText) {
 Your job:
 1. Identify the question(s) visible on screen.
 2. Determine the correct answer(s).
-3. Return ONLY the answer in a concise format.
+3. Return a JSON response so the extension can AUTO-CLICK the correct answer.
+
+You MUST respond with valid JSON in this exact format:
+{
+  "type": "multiple_choice" | "multiple_select" | "fill_in_blank" | "short_answer" | "matching",
+  "answer": "the answer text",
+  "letter": "C",
+  "letters": ["A", "C"],
+  "answerText": "the full text of the correct option"
+}
 
 Rules:
-- For multiple choice: return the letter(s) and brief text, e.g. "C. 2x + 2"
-- For multiple select: return all correct letters, e.g. "A, C"
-- For fill-in-the-blank: return just the answer value
-- For matching: return each pair, e.g. "CO2 → Reactant, H2O → Reactant, O2 → Product, C6H12O6 → Primary energy storage"
-- For short answer / essay: provide a concise but complete answer (2-4 sentences for short answer, a paragraph for essay)
-- If multiple questions are visible, answer ALL of them, numbered.
-- Be direct. No preamble or explanation unless the question asks for it.
-- If you cannot determine the answer with confidence, say "Uncertain: " followed by your best guess.`;
+- For multiple choice: set type="multiple_choice", letter to the correct letter (A/B/C/D), and answerText to the full option text (e.g. "2x + 2")
+- For multiple select: set type="multiple_select", letters to array of correct letters, and answerText to comma-separated correct option texts
+- For fill-in-the-blank: set type="fill_in_blank", answer to the value to type
+- For short answer / essay: set type="short_answer", answer to the full response
+- For matching: set type="matching", answer to the pairs description
+- Always set "answer" to a human-readable string of the answer regardless of type
+- If you cannot determine the answer with confidence, prefix answer with "Uncertain: "
+- Return ONLY the JSON object. No markdown, no backticks, no explanation.`;
 }
 
 async function queryAI(screenshotDataUrl, selectedText, settings) {
@@ -100,7 +109,20 @@ async function queryAI(screenshotDataUrl, selectedText, settings) {
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content?.trim() || "No answer returned.";
+  const rawContent = data.choices?.[0]?.message?.content?.trim() || "";
+
+  if (!rawContent) return { type: "short_answer", answer: "No answer returned." };
+
+  // Try to parse as JSON for structured auto-click support
+  try {
+    const cleaned = rawContent.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+    const parsed = JSON.parse(cleaned);
+    if (parsed && parsed.answer) return parsed;
+  } catch {
+    // AI returned plain text — wrap it in a simple structure
+  }
+
+  return { type: "short_answer", answer: rawContent };
 }
 
 // ── Message Handler ─────────────────────────────────────────────────────────
@@ -141,9 +163,16 @@ async function handleAnswerRequest(message, sendResponse) {
     }
 
     const screenshot = message.screenshot || await captureScreenshot();
-    const answer = await queryAI(screenshot, message.selectedText, settings);
+    const result = await queryAI(screenshot, message.selectedText, settings);
 
-    sendResponse({ answer, displayMode: settings.displayMode });
+    sendResponse({
+      answer: result.answer,
+      type: result.type,
+      letter: result.letter,
+      letters: result.letters,
+      answerText: result.answerText,
+      displayMode: settings.displayMode,
+    });
   } catch (err) {
     sendResponse({ error: err.message });
   }
