@@ -7,8 +7,7 @@
  * 3. Message routing between content script and popup
  */
 
-const API_BASE_URL = "https://44a940115329-tunnel-ktznozzt.devinapps.com";
-const API_AUTH = "Basic " + btoa("user:be68d497b75fa20a5357ef2d5ac88d1d");
+const API_BASE_URL = "https://answersnap.onrender.com";
 
 const DEFAULT_SETTINGS = {
   enabled: true,
@@ -36,7 +35,7 @@ async function captureScreenshot() {
 async function queryBackend(screenshotDataUrl, selectedText) {
   const response = await fetch(`${API_BASE_URL}/answer`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": API_AUTH },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       screenshot: screenshotDataUrl,
       selectedText: selectedText || "",
