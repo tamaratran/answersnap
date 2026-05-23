@@ -21,50 +21,15 @@ async function getSettings() {
   return { ...DEFAULT_SETTINGS, ...result.settings };
 }
 
-const MAX_SCREENSHOT_WIDTH = 1280;
-const JPEG_QUALITY = 0.5;
-
 async function captureScreenshot() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new Error("No active tab found");
 
   const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-    format: "jpeg",
-    quality: 50,
+    format: "png",
+    quality: 90,
   });
-
-  return resizeScreenshot(dataUrl);
-}
-
-async function resizeScreenshot(dataUrl) {
-  const resp = await fetch(dataUrl);
-  const blob = await resp.blob();
-  const bitmap = await createImageBitmap(blob);
-
-  if (bitmap.width <= MAX_SCREENSHOT_WIDTH) {
-    bitmap.close();
-    return dataUrl;
-  }
-
-  const scale = MAX_SCREENSHOT_WIDTH / bitmap.width;
-  const width = MAX_SCREENSHOT_WIDTH;
-  const height = Math.round(bitmap.height * scale);
-
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
-
-  const resizedBlob = await canvas.convertToBlob({
-    type: "image/jpeg",
-    quality: JPEG_QUALITY,
-  });
-
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.readAsDataURL(resizedBlob);
-  });
+  return dataUrl;
 }
 
 async function queryBackend(screenshotDataUrl, selectedText) {
