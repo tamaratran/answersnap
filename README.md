@@ -42,15 +42,21 @@ Navigate to any page with a question. **Double-click** on or near the question. 
 
 ```
 answersnap/
-├── manifest.json       # Chrome Extension manifest (v3)
-├── background.js       # Service worker: screenshot capture + AI API
-├── content.js          # Content script: double-click listener + overlay
-├── content.css         # Overlay and toast styles
-├── popup.html          # Extension popup UI
-├── popup.js            # Popup settings logic
-├── popup.css           # Popup styles
-├── icons/              # Extension icons
-└── landing/            # Marketing landing page
+├── manifest.json          # Chrome Extension manifest (v3)
+├── background.js          # Service worker: screenshot capture + AI API
+├── content.js             # Content script: double-click listener + overlay
+├── content.css            # Overlay and toast styles
+├── popup.html             # Extension popup UI
+├── popup.js               # Popup settings logic
+├── popup.css              # Popup styles
+├── privacy-policy.html    # Privacy policy (required for Chrome Web Store)
+├── icons/                 # Extension icons (16, 48, 128 px)
+├── scripts/               # Build & release tooling
+│   ├── pack.js            # Package extension into a ZIP for CWS upload
+│   └── bump-version.js    # Bump version across manifest + package.json
+├── store/                 # Chrome Web Store listing assets & copy
+│   └── LISTING.md         # Store description, permission justifications, etc.
+└── landing/               # Marketing landing page
     ├── index.html
     ├── style.css
     └── script.js
@@ -78,6 +84,35 @@ answersnap/
 You need an OpenAI API key. Get one at [platform.openai.com/api-keys](https://platform.openai.com/api-keys).
 
 Cost is typically a few cents per question (GPT-4o vision pricing).
+
+## Chrome Web Store Submission
+
+### Package the extension
+
+```bash
+npm run pack:zip
+# Creates dist/answersnap-<version>.zip
+```
+
+### Submit to Chrome Web Store
+
+1. Go to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
+2. Click **New Item** → upload `dist/answersnap-<version>.zip`
+3. Fill in the listing fields using the copy in [`store/LISTING.md`](store/LISTING.md)
+4. **Privacy Policy URL** — host `privacy-policy.html` (e.g. via GitHub Pages) and paste the URL
+5. Upload 1-5 screenshots (1280×800 or 640×400)
+6. **Category**: Productivity
+7. Submit for review
+
+### Bump version for updates
+
+```bash
+npm run version:bump patch   # 1.0.0 → 1.0.1
+npm run version:bump minor   # 1.0.0 → 1.1.0
+npm run version:bump major   # 1.0.0 → 2.0.0
+```
+
+Then re-run `npm run pack:zip` and upload the new ZIP.
 
 ## Landing Page
 
