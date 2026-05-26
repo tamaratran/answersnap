@@ -8,7 +8,9 @@
     "lint": "eslint '**/*.js' --ignore-pattern 'node_modules/' --ignore-pattern 'landing/'",
     "typecheck": "echo 'No TypeScript in this project'",
     "dev:landing": "cd landing && python3 -m http.server 8080",
-    "build": "echo 'No build step needed — plain JS Chrome extension'"
+    "build": "echo 'No build step needed — plain JS Chrome extension'",
+    "pack:zip": "node scripts/pack.js",
+    "version:bump": "node scripts/bump-version.js"
   },
   "devDependencies": {
     "eslint": "^9.0.0"

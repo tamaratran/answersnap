@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "AnswerSnap",
+  "name": "AnswerSnap — AI Answer Any Question",
   "version": "1.0.0",
-  "description": "AI-powered instant answers. Double-click any question to get the answer.",
+  "description": "Double-click any question on screen to get instant AI-powered answers. Supports multiple choice, fill-in-the-blank, matching, short answer, and essay questions.",
+  "minimum_chrome_version": "116",
   "permissions": [
     "activeTab",
     "storage",
@@ -17,9 +18,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -43,5 +50,6 @@
       },
       "description": "Toggle AnswerSnap on/off"
     }
-  }
+  },
+  "offline_enabled": false
 }

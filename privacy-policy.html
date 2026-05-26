@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AnswerSnap — Privacy Policy</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f1a;
+      color: #e2e8f0;
+      line-height: 1.7;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #818cf8, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .updated {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 32px;
+    }
+    h2 {
+      font-size: 18px;
+      color: #818cf8;
+      margin: 28px 0 10px;
+    }
+    p, li {
+      font-size: 15px;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+    }
+    ul {
+      padding-left: 24px;
+      margin-bottom: 12px;
+    }
+    a { color: #818cf8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AnswerSnap Privacy Policy</h1>
+    <p class="updated">Last updated: May 2025</p>
+
+    <h2>Overview</h2>
+    <p>AnswerSnap is a Chrome extension that uses AI vision to answer questions visible on your screen. Your privacy is important to us. This policy explains what data the extension accesses, how it is used, and what is stored.</p>
+
+    <h2>Data Collection</h2>
+    <p>AnswerSnap does <strong>not</strong> collect, transmit, or store any personal information on our servers. The extension has no backend server and no analytics.</p>
+
+    <h2>Data Processed Locally</h2>
+    <ul>
+      <li><strong>OpenAI API Key</strong> — You provide your own API key, which is stored locally in Chrome's <code>chrome.storage.local</code>. It never leaves your browser except when sent directly to the OpenAI API.</li>
+      <li><strong>Extension Settings</strong> — Display mode and model preferences are stored locally in <code>chrome.storage.local</code>.</li>
+    </ul>
+
+    <h2>Data Sent to Third Parties</h2>
+    <ul>
+      <li><strong>OpenAI API</strong> — When you double-click a question, a screenshot of the currently visible tab is captured and sent to the OpenAI API (<code>api.openai.com</code>) along with your API key for processing. This is the only external network request the extension makes.</li>
+      <li>No data is sent to any other third party. There are no analytics, tracking pixels, or advertising services.</li>
+    </ul>
+
+    <h2>Screenshots</h2>
+    <p>Screenshots are captured on-demand only (when you double-click). They are sent directly to the OpenAI API and are not saved to disk, uploaded to any server we control, or retained after the API response is received.</p>
+
+    <h2>Permissions</h2>
+    <ul>
+      <li><strong>activeTab</strong> — Required to capture a screenshot of the current tab when you double-click.</li>
+      <li><strong>storage</strong> — Required to save your API key and preferences locally.</li>
+      <li><strong>scripting</strong> — Required to inject the content script that listens for double-click events.</li>
+      <li><strong>host_permissions (&lt;all_urls&gt;)</strong> — Required so the content script can run on any webpage where you might have a question.</li>
+    </ul>
+
+    <h2>Data Retention</h2>
+    <p>All data is stored locally in your browser. Uninstalling the extension removes all stored data. No data is retained on any external server controlled by AnswerSnap.</p>
+
+    <h2>Children's Privacy</h2>
+    <p>This extension is not directed at children under 13. We do not knowingly collect data from children.</p>
+
+    <h2>Changes to This Policy</h2>
+    <p>We may update this policy from time to time. Changes will be reflected in the "Last updated" date above.</p>
+
+    <h2>Contact</h2>
+    <p>If you have questions about this privacy policy, please open an issue on our <a href="https://github.com/tamaratran/answersnap">GitHub repository</a>.</p>
+  </div>
+</body>
+</html>
