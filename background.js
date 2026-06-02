@@ -11,7 +11,7 @@ const API_BASE_URL = "https://answersnap.onrender.com";
 
 const DEFAULT_SETTINGS = {
   enabled: true,
-  displayMode: "homework", // "invisible" | "sneaky" | "homework"
+  displayMode: "invisible",
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
