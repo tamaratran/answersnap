@@ -2,8 +2,8 @@
  * AnswerSnap — Content Script
  *
  * Injected into every page. Listens for double-click events,
- * communicates with the background service worker, and renders
- * the answer overlay.
+ * communicates with the background service worker, and delivers
+ * answers via clipboard + toast notification.
  */
 
 (() => {
@@ -12,105 +12,7 @@
   let enabled = true;
   let isLoading = false;
 
-  // ── Overlay DOM ──────────────────────────────────────────────────────────
-
-  function createOverlay() {
-    const existing = document.getElementById("answersnap-overlay");
-    if (existing) return existing;
-
-    const overlay = document.createElement("div");
-    overlay.id = "answersnap-overlay";
-    overlay.className = "answersnap-overlay answersnap-hidden";
-    overlay.innerHTML = `
-      <div class="answersnap-header">
-        <span class="answersnap-title">AnswerSnap</span>
-        <div class="answersnap-actions">
-          <button class="answersnap-copy" title="Copy answer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-            </svg>
-          </button>
-          <button class="answersnap-close" title="Close">&times;</button>
-        </div>
-      </div>
-      <div class="answersnap-body">
-        <div class="answersnap-answer"></div>
-      </div>
-    `;
-
-    document.documentElement.appendChild(overlay);
-
-    overlay.querySelector(".answersnap-close").addEventListener("click", () => {
-      hideOverlay();
-    });
-
-    overlay.querySelector(".answersnap-copy").addEventListener("click", () => {
-      const answer = overlay.querySelector(".answersnap-answer").textContent;
-      navigator.clipboard.writeText(answer).then(() => {
-        const btn = overlay.querySelector(".answersnap-copy");
-        btn.innerHTML = "&#10003;";
-        setTimeout(() => {
-          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
-        }, 1500);
-      });
-    });
-
-    return overlay;
-  }
-
-  function showLoading(mode) {
-    if (mode === "invisible") return;
-
-    const overlay = createOverlay();
-    const answerEl = overlay.querySelector(".answersnap-answer");
-    answerEl.innerHTML = `
-      <div class="answersnap-loading">
-        <div class="answersnap-spinner"></div>
-        <span>Analyzing...</span>
-      </div>
-    `;
-
-    overlay.classList.remove("answersnap-hidden");
-
-    if (mode === "sneaky") {
-      overlay.classList.add("answersnap-sneaky");
-    } else {
-      overlay.classList.remove("answersnap-sneaky");
-    }
-  }
-
-  function showAnswer(answer, mode) {
-    if (mode === "invisible") {
-      navigator.clipboard.writeText(answer).catch(() => {});
-      showToast("Answer copied to clipboard");
-      return;
-    }
-
-    const overlay = createOverlay();
-    const answerEl = overlay.querySelector(".answersnap-answer");
-    answerEl.textContent = answer;
-
-    overlay.classList.remove("answersnap-hidden", "answersnap-sneaky");
-
-    if (mode === "sneaky") {
-      overlay.classList.add("answersnap-sneaky");
-    }
-  }
-
-  function showError(message) {
-    const overlay = createOverlay();
-    const answerEl = overlay.querySelector(".answersnap-answer");
-    answerEl.innerHTML = `<span class="answersnap-error">${escapeHtml(message)}</span>`;
-    overlay.classList.remove("answersnap-hidden", "answersnap-sneaky");
-  }
-
-  function hideOverlay() {
-    const overlay = document.getElementById("answersnap-overlay");
-    if (overlay) {
-      overlay.classList.add("answersnap-hidden");
-    }
-  }
+  // ── Toast Notification ──────────────────────────────────────────────────
 
   function showToast(text) {
     const toast = document.createElement("div");
@@ -128,34 +30,27 @@
     }, 2000);
   }
 
-  function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  // ── Auto-Click Logic ────────────────────────────────────────────────────
+  // ── Auto-Click Logic ──────────────────────────────────────────────────
 
   function autoClickAnswer(response, clickTarget) {
-    const { type, letter, letters, answerText, answer } = response;
+    const type = (response.type || "").toLowerCase();
 
-    if (type === "multiple_choice" && letter) {
-      return clickMultipleChoice(letter, answerText, clickTarget);
+    if (type === "multiple_choice" && response.letter) {
+      return clickMultipleChoice(response.letter, response.answerText, clickTarget);
     }
 
-    if (type === "multiple_select" && letters && letters.length > 0) {
-      return clickMultipleSelect(letters, answerText, clickTarget);
+    if (type === "multiple_select" && response.letters?.length) {
+      return clickMultipleSelect(response.letters, response.answerText, clickTarget);
     }
 
-    if (type === "fill_in_blank" && answer) {
-      return fillInBlank(answer, clickTarget);
+    if (type === "fill_in_the_blank" && response.answer) {
+      return fillInBlank(response.answer, clickTarget);
     }
 
     return false;
   }
 
   function clickMultipleChoice(letter, answerText, clickTarget) {
-    // Find the question container — look up from click target
     const container = findQuestionContainer(clickTarget);
     const options = findOptionElements(container);
 
@@ -186,7 +81,6 @@
   }
 
   function fillInBlank(answer, clickTarget) {
-    // Find nearest input/textarea to the click target
     const container = findQuestionContainer(clickTarget);
     const inputs = container.querySelectorAll(
       'input[type="text"], input:not([type]), textarea, [contenteditable="true"]'
@@ -216,7 +110,6 @@
   }
 
   function findQuestionContainer(el) {
-    // Walk up the DOM to find a container that likely holds the question + options
     let current = el;
     const containerSelectors = [
       "[class*='question']", "[class*='Question']",
@@ -231,28 +124,23 @@
       for (const sel of containerSelectors) {
         if (current.matches(sel)) return current;
       }
-      // If current element contains multiple radio/checkbox inputs, it's likely the container
       const inputs = current.querySelectorAll('input[type="radio"], input[type="checkbox"]');
       if (inputs.length >= 2) return current;
       current = current.parentElement;
     }
 
-    // Fallback: return a wide area around the click
     return el.closest("form") || el.closest("fieldset") || el.closest("section") || document.body;
   }
 
   function findOptionElements(container) {
-    // Gather all clickable option-like elements
     const options = [];
 
-    // Radio buttons and checkboxes (with labels)
     const inputs = container.querySelectorAll('input[type="radio"], input[type="checkbox"]');
     for (const input of inputs) {
       const label = input.closest("label") || container.querySelector(`label[for="${input.id}"]`);
       options.push({ element: label || input, input, text: (label || input.parentElement)?.textContent?.trim() || "" });
     }
 
-    // If no inputs found, look for clickable option elements (custom UIs)
     if (options.length === 0) {
       const optionEls = container.querySelectorAll(
         '[class*="option"], [class*="answer"], [class*="choice"], [role="option"], [role="radio"], li'
@@ -269,7 +157,6 @@
     const text = option.text.toLowerCase();
     const letterLower = letter.toLowerCase();
 
-    // Match by letter prefix: "A.", "A)", "A ", "(A)"
     const letterPatterns = [
       `${letterLower}.`, `${letterLower})`, `(${letterLower})`,
       `${letterLower} `, `${letter}.`, `${letter})`, `(${letter})`,
@@ -281,12 +168,10 @@
       }
     }
 
-    // Match by answer text content
     if (answerText && text.includes(answerText.toLowerCase())) {
       return true;
     }
 
-    // Match by input value attribute
     if (option.input) {
       const val = (option.input.value || "").toLowerCase();
       if (val === letterLower || val === answerText?.toLowerCase()) {
@@ -299,12 +184,10 @@
 
   function clickElement(option) {
     const el = option.input || option.element;
-    // Dispatch mouse events in natural order for frameworks that listen on these
     el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     el.click();
 
-    // For inputs, ensure change event fires
     if (option.input) {
       option.input.checked = true;
       option.input.dispatchEvent(new Event("change", { bubbles: true }));
@@ -317,33 +200,21 @@
   document.addEventListener("dblclick", async (e) => {
     if (!enabled || isLoading) return;
 
-    // Don't trigger on our own overlay
-    if (e.target.closest("#answersnap-overlay")) return;
+    // Don't trigger on our own elements
+    if (e.target.closest(".answersnap-toast")) return;
 
     const selectedText = window.getSelection()?.toString()?.trim() || "";
     const clickTarget = e.target;
 
     isLoading = true;
 
-    // Capture screenshot BEFORE showing the loading overlay so it doesn't
-    // appear in the image sent to the AI.
     let screenshot;
     try {
       screenshot = await sendMessage({ type: "CAPTURE_SCREENSHOT" });
     } catch {
-      showError("Failed to capture screenshot.");
+      showToast("Failed to capture screenshot.");
       isLoading = false;
       return;
-    }
-
-    // Now show the loading indicator
-    let displayMode = "homework";
-    try {
-      const settings = await sendMessage({ type: "GET_SETTINGS" });
-      displayMode = settings.displayMode;
-      showLoading(displayMode);
-    } catch {
-      showLoading("homework");
     }
 
     try {
@@ -354,21 +225,19 @@
       });
 
       if (response.error) {
-        showError(response.error);
+        showToast(response.error);
       } else {
-        // Try to auto-click the correct answer
         const clicked = autoClickAnswer(response, clickTarget);
 
         if (clicked) {
           showToast("Answer selected!");
-          hideOverlay();
         } else {
-          // Fallback: show the answer in overlay (for non-clickable questions)
-          showAnswer(response.answer, response.displayMode);
+          navigator.clipboard.writeText(response.answer).catch(() => {});
+          showToast("Answer copied to clipboard");
         }
       }
     } catch (_err) {
-      showError("Failed to get answer. Check your settings.");
+      showToast("Failed to get answer. Check your settings.");
     } finally {
       isLoading = false;
     }
@@ -388,20 +257,10 @@
     });
   }
 
-  // Listen for toggle commands from background
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "TOGGLE_STATE") {
       enabled = message.enabled;
-      if (!enabled) hideOverlay();
       showToast(enabled ? "AnswerSnap ON" : "AnswerSnap OFF");
-    }
-  });
-
-  // ── Keyboard Shortcut: Escape to close ─────────────────────────────────
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      hideOverlay();
     }
   });
 
