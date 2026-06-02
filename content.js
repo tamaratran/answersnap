@@ -43,7 +43,7 @@
       return clickMultipleSelect(response.letters, response.answerText, clickTarget);
     }
 
-    if (type === "fill_in_the_blank" && response.answer) {
+    if (type === "fill_in_blank" && response.answer) {
       return fillInBlank(response.answer, clickTarget);
     }
 
@@ -211,6 +211,7 @@
     let screenshot;
     try {
       screenshot = await sendMessage({ type: "CAPTURE_SCREENSHOT" });
+      if (screenshot?.error) throw new Error(screenshot.error);
     } catch {
       showToast("Failed to capture screenshot.");
       isLoading = false;
