@@ -1,6 +1,7 @@
 /* AnswerSnap — Content Script Styles */
 
 .answersnap-overlay {
+  display: none !important;
   position: fixed;
   bottom: 20px;
   right: 20px;
