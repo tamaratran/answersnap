@@ -36,15 +36,85 @@
     const type = (response.type || "").toLowerCase();
 
     if (type === "multiple_choice" && response.letter) {
-      return clickMultipleChoice(response.letter, response.answerText, clickTarget);
+      const result = clickMultipleChoice(response.letter, response.answerText, clickTarget);
+      if (result) return true;
     }
 
     if (type === "multiple_select" && response.letters?.length) {
-      return clickMultipleSelect(response.letters, response.answerText, clickTarget);
+      const result = clickMultipleSelect(response.letters, response.answerText, clickTarget);
+      if (result) return true;
     }
 
     if (type === "fill_in_blank" && response.answer) {
-      return fillInBlank(response.answer, clickTarget);
+      const result = fillInBlank(response.answer, clickTarget);
+      if (result) return true;
+    }
+
+    // Fallback: try to match answer text against any clickable option on the page
+    const answerText = response.answerText || response.answer || "";
+    if (answerText) {
+      return fallbackClickByText(answerText, response.letter, clickTarget);
+    }
+
+    return false;
+  }
+
+  function fallbackClickByText(answerText, letter, clickTarget) {
+    const container = findQuestionContainer(clickTarget);
+    const options = findOptionElements(container);
+    const answerLower = answerText.toLowerCase().trim();
+
+    // Try exact text match first
+    for (const option of options) {
+      const optText = option.text.toLowerCase().trim();
+      // Strip leading letter prefix (e.g., "a. ", "b) ") for comparison
+      const stripped = optText.replace(/^[a-z][.)]\s*/, "").replace(/^\([a-z]\)\s*/, "");
+      if (stripped === answerLower || optText === answerLower) {
+        clickElement(option);
+        return true;
+      }
+    }
+
+    // Try contains match
+    for (const option of options) {
+      const optText = option.text.toLowerCase().trim();
+      if (optText.includes(answerLower) || answerLower.includes(optText)) {
+        if (optText.length > 1) {
+          clickElement(option);
+          return true;
+        }
+      }
+    }
+
+    // Try matching by letter if provided
+    if (letter) {
+      const letterLower = letter.toLowerCase();
+      for (const option of options) {
+        if (matchesOption(option, letter, null)) {
+          clickElement(option);
+          return true;
+        }
+        // Also check input value
+        if (option.input && option.input.value?.toLowerCase() === letterLower) {
+          clickElement(option);
+          return true;
+        }
+      }
+    }
+
+    // Broadest search: look for options across the entire page
+    const allInputs = document.querySelectorAll('input[type="radio"], input[type="checkbox"]');
+    for (const input of allInputs) {
+      const label = input.closest("label") || document.querySelector(`label[for="${input.id}"]`);
+      const text = (label || input.parentElement)?.textContent?.toLowerCase()?.trim() || "";
+      const stripped = text.replace(/^[a-z][.)]\s*/, "").replace(/^\([a-z]\)\s*/, "");
+      if (stripped === answerLower || text.includes(answerLower) || answerLower.includes(stripped)) {
+        if (text.length > 1) {
+          const option = { element: label || input, input, text };
+          clickElement(option);
+          return true;
+        }
+      }
     }
 
     return false;
