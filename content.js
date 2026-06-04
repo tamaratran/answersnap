@@ -234,6 +234,9 @@
       // If current element contains multiple radio/checkbox inputs, it's likely the container
       const inputs = current.querySelectorAll('input[type="radio"], input[type="checkbox"]');
       if (inputs.length >= 2) return current;
+      // Google Forms uses div[role="radio"] and div[role="checkbox"] instead of inputs
+      const ariaInputs = current.querySelectorAll('[role="radio"], [role="checkbox"]');
+      if (ariaInputs.length >= 2) return current;
       current = current.parentElement;
     }
 
@@ -255,10 +258,14 @@
     // If no inputs found, look for clickable option elements (custom UIs)
     if (options.length === 0) {
       const optionEls = container.querySelectorAll(
-        '[class*="option"], [class*="answer"], [class*="choice"], [role="option"], [role="radio"], li'
+        '[class*="option"], [class*="answer"], [class*="choice"], [role="option"], [role="radio"], [role="checkbox"], li'
       );
       for (const el of optionEls) {
-        options.push({ element: el, input: null, text: el.textContent?.trim() || "" });
+        const text = el.textContent?.trim()
+          || el.getAttribute("data-value")
+          || el.getAttribute("aria-label")
+          || "";
+        options.push({ element: el, input: null, text });
       }
     }
 
