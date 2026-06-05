@@ -140,18 +140,56 @@
     const { type, letter, letters, answerText, answer } = response;
 
     if (type === "multiple_choice" && letter) {
-      return clickMultipleChoice(letter, answerText, clickTarget);
+      const result = clickMultipleChoice(letter, answerText, clickTarget);
+      if (result) return true;
     }
 
     if (type === "multiple_select" && letters && letters.length > 0) {
-      return clickMultipleSelect(letters, answerText, clickTarget);
+      const result = clickMultipleSelect(letters, answerText, clickTarget);
+      if (result) return true;
     }
 
     if (type === "fill_in_blank" && answer) {
       return fillInBlank(answer, clickTarget);
     }
 
+    // Fallback: try to match answer text directly against options on the page.
+    // This handles cases where the backend returns answer text but no letter/letters
+    // (e.g., Google Forms which doesn't use A/B/C/D labels).
+    if (answer || answerText) {
+      const textResult = clickByAnswerText(answer || answerText, clickTarget);
+      if (textResult) return true;
+    }
+
+    // Last resort: try filling a text input if one exists near the click target
+    if (answer) {
+      const filled = fillInBlank(answer, clickTarget);
+      if (filled) return true;
+    }
+
     return false;
+  }
+
+  function clickByAnswerText(answerStr, clickTarget) {
+    const container = findQuestionContainer(clickTarget);
+    const options = findOptionElements(container);
+    if (options.length === 0) return false;
+
+    // Split comma-separated answers (e.g., "Nucleus, Mitochondria, Ribosome")
+    const answerParts = answerStr.split(/,\s*/).map(s => s.trim().toLowerCase()).filter(Boolean);
+    let clicked = false;
+
+    for (const option of options) {
+      const optText = option.text.toLowerCase();
+      for (const part of answerParts) {
+        if (optText === part || optText.includes(part) || part.includes(optText)) {
+          clickElement(option);
+          clicked = true;
+          break;
+        }
+      }
+    }
+    return clicked;
   }
 
   function clickMultipleChoice(letter, answerText, clickTarget) {
@@ -186,11 +224,20 @@
   }
 
   function fillInBlank(answer, clickTarget) {
+    const inputSelector = 'input[type="text"], input:not([type]), textarea, [contenteditable="true"]';
     // Find nearest input/textarea to the click target
     const container = findQuestionContainer(clickTarget);
-    const inputs = container.querySelectorAll(
-      'input[type="text"], input:not([type]), textarea, [contenteditable="true"]'
-    );
+    let inputs = container.querySelectorAll(inputSelector);
+
+    // If no inputs found in container, walk up from the click target more aggressively
+    if (inputs.length === 0) {
+      let parent = clickTarget;
+      for (let i = 0; i < 15 && parent && parent !== document.body; i++) {
+        inputs = parent.querySelectorAll(inputSelector);
+        if (inputs.length > 0) break;
+        parent = parent.parentElement;
+      }
+    }
 
     if (inputs.length > 0) {
       const input = inputs[0];
@@ -234,6 +281,9 @@
       // If current element contains multiple radio/checkbox inputs, it's likely the container
       const inputs = current.querySelectorAll('input[type="radio"], input[type="checkbox"]');
       if (inputs.length >= 2) return current;
+      // Google Forms uses div[role="radio"] and div[role="checkbox"] instead of inputs
+      const ariaInputs = current.querySelectorAll('[role="radio"], [role="checkbox"]');
+      if (ariaInputs.length >= 2) return current;
       current = current.parentElement;
     }
 
@@ -255,10 +305,14 @@
     // If no inputs found, look for clickable option elements (custom UIs)
     if (options.length === 0) {
       const optionEls = container.querySelectorAll(
-        '[class*="option"], [class*="answer"], [class*="choice"], [role="option"], [role="radio"], li'
+        '[class*="option"], [class*="answer"], [class*="choice"], [role="option"], [role="radio"], [role="checkbox"], li'
       );
       for (const el of optionEls) {
-        options.push({ element: el, input: null, text: el.textContent?.trim() || "" });
+        const text = el.textContent?.trim()
+          || el.getAttribute("data-value")
+          || el.getAttribute("aria-label")
+          || "";
+        options.push({ element: el, input: null, text });
       }
     }
 
