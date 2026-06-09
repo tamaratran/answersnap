@@ -299,17 +299,39 @@
       groups.push({ type: "gforms-radio", options });
     });
 
-    // Google Forms: checkbox groups (div[role="group"] with div[role="checkbox"])
-    document.querySelectorAll('[role="group"]').forEach((cg) => {
-      const items = [...cg.querySelectorAll('[role="checkbox"]')];
-      if (!items.length) return;
-      const options = items.map((el) => {
-        const label = el.closest("label");
-        const text = el.textContent?.trim() || el.getAttribute("data-value") || el.getAttribute("aria-label") || label?.textContent?.trim() || "";
-        return { element: el, label: label || el, text };
+    // Google Forms: collect checkbox groups from div[role="checkbox"] elements
+    // Group checkboxes by their nearest common container that doesn't also contain radios
+    const allCheckboxes = [...document.querySelectorAll('[role="checkbox"]')].filter(
+      (el) => !el.closest("#answersnap-overlay")
+    );
+    if (allCheckboxes.length) {
+      // Find the tightest container for each checkbox group
+      const seen = new Set();
+      allCheckboxes.forEach((cb) => {
+        if (seen.has(cb)) return;
+        // Walk up to find a container holding these checkboxes but not radios
+        let container = cb.parentElement;
+        while (container && container !== document.body) {
+          const cbs = container.querySelectorAll('[role="checkbox"]');
+          const radios = container.querySelectorAll('[role="radio"]');
+          if (cbs.length > 0 && radios.length === 0) break;
+          container = container.parentElement;
+        }
+        if (!container || container === document.body) container = cb.parentElement;
+        const items = [...container.querySelectorAll('[role="checkbox"]')];
+        const key = items.map((el) => el.getAttribute("aria-label")).join(",");
+        if (!seen.has(key)) {
+          seen.add(key);
+          items.forEach((el) => seen.add(el));
+          const options = items.map((el) => {
+            const label = el.closest("label");
+            const text = el.getAttribute("aria-label") || el.textContent?.trim() || el.getAttribute("data-value") || label?.textContent?.trim() || "";
+            return { element: el, label: label || el, text };
+          });
+          groups.push({ type: "gforms-checkbox", options });
+        }
       });
-      groups.push({ type: "gforms-checkbox", options });
-    });
+    }
 
     // Google Forms: div[role="listbox"] with div[role="option"]
     document.querySelectorAll('[role="listbox"]').forEach((lb) => {
