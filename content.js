@@ -145,7 +145,7 @@
     const textInputs = collectTextInputs();
 
     let textInputIdx = 0;
-    const DELAY_MS = 800;
+    const DELAY_MS = 1500;
 
     parsed.reduce((promise, entry, i) => {
       return promise.then(() => new Promise((resolve) => {
@@ -169,12 +169,17 @@
     el.scrollIntoView({ behavior: "smooth", block: "center" });
     const target = el.closest("label") || el.closest("div") || el;
     const prev = target.style.cssText;
-    target.style.transition = "background-color 0.3s ease";
-    target.style.backgroundColor = "rgba(66, 133, 244, 0.25)";
+    target.style.transition = "background-color 0.4s ease, outline 0.2s ease";
+    target.style.backgroundColor = "rgba(66, 133, 244, 0.35)";
+    target.style.outline = "2px solid rgba(66, 133, 244, 0.7)";
+    target.style.outlineOffset = "2px";
+    target.style.borderRadius = "4px";
     setTimeout(() => {
       target.style.backgroundColor = "";
-      setTimeout(() => { target.style.cssText = prev; }, 300);
-    }, 500);
+      target.style.outline = "";
+      target.style.outlineOffset = "";
+      setTimeout(() => { target.style.cssText = prev; }, 400);
+    }, 1000);
   }
 
   function parseAnswerLines(answerText) {
