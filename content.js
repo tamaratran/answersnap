@@ -145,15 +145,21 @@
     const textInputs = collectTextInputs();
 
     let textInputIdx = 0;
+    const DELAY_MS = 600;
 
-    for (const entry of parsed) {
-      if (entry.letter) {
-        selectChoice(groups, entry);
-      } else if (entry.value) {
-        fillText(textInputs, textInputIdx, entry.value);
-        textInputIdx++;
-      }
-    }
+    parsed.reduce((promise, entry, i) => {
+      return promise.then(() => new Promise((resolve) => {
+        setTimeout(() => {
+          if (entry.letter) {
+            selectChoice(groups, entry);
+          } else if (entry.value) {
+            fillText(textInputs, textInputIdx, entry.value);
+            textInputIdx++;
+          }
+          resolve();
+        }, i === 0 ? 0 : DELAY_MS);
+      }));
+    }, Promise.resolve());
   }
 
   function parseAnswerLines(answerText) {
