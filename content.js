@@ -143,8 +143,19 @@
     const parsed = parseAnswerLines(answerText);
     if (parsed.length === 0) return;
 
-    const entry = parsed[0];
     const groups = collectOptionGroups();
+
+    // Check if this is a multi-select answer (multiple entries with letters)
+    if (parsed.length > 1 && parsed.every((e) => e.letter)) {
+      // Multi-select: check each matching checkbox/option
+      for (const entry of parsed) {
+        const el = selectChoice(groups, entry, clickTarget);
+        if (el) highlightElement(el);
+      }
+      return;
+    }
+
+    const entry = parsed[0];
 
     if (entry.letter) {
       const el = selectChoice(groups, entry, clickTarget);
@@ -212,6 +223,16 @@
     for (const line of lines) {
       const trimmed = line.trim();
 
+      // Check for comma-separated multi-select: "A, C" or "A, C, D"
+      const multiMatch = trimmed.match(/^([A-Za-z])(?:\s*,\s*[A-Za-z])+$/);
+      if (multiMatch) {
+        const letters = trimmed.split(/\s*,\s*/);
+        for (const l of letters) {
+          results.push({ questionNum: null, letter: l.trim().toUpperCase(), text: null, value: null });
+        }
+        continue;
+      }
+
       // Match numbered answer: "1. C. Mitochondria" or "5. 6"
       const numberedMatch = trimmed.match(/^(\d+)\.\s*(.+)/);
       let questionNum = null;
@@ -271,10 +292,23 @@
       const items = [...rg.querySelectorAll('[role="radio"], [data-value]')];
       if (!items.length) return;
       const options = items.map((el) => {
-        const text = el.textContent?.trim() || el.getAttribute("data-value") || "";
-        return { element: el, label: el, text };
+        const label = el.closest("label");
+        const text = el.textContent?.trim() || el.getAttribute("data-value") || el.getAttribute("aria-label") || label?.textContent?.trim() || "";
+        return { element: el, label: label || el, text };
       });
       groups.push({ type: "gforms-radio", options });
+    });
+
+    // Google Forms: checkbox groups (div[role="group"] with div[role="checkbox"])
+    document.querySelectorAll('[role="group"]').forEach((cg) => {
+      const items = [...cg.querySelectorAll('[role="checkbox"]')];
+      if (!items.length) return;
+      const options = items.map((el) => {
+        const label = el.closest("label");
+        const text = el.textContent?.trim() || el.getAttribute("data-value") || el.getAttribute("aria-label") || label?.textContent?.trim() || "";
+        return { element: el, label: label || el, text };
+      });
+      groups.push({ type: "gforms-checkbox", options });
     });
 
     // Google Forms: div[role="listbox"] with div[role="option"]
@@ -334,6 +368,9 @@
         if (pat.test(opt.text.trim())) return opt;
       }
     }
+    // Positional fallback: A=1st, B=2nd, C=3rd, etc.
+    const idx = letter.charCodeAt(0) - "A".charCodeAt(0);
+    if (idx >= 0 && idx < options.length) return options[idx];
     return null;
   }
 
@@ -344,7 +381,32 @@
     for (const opt of options) {
       if (opt.text.toLowerCase().includes(lower)) return opt;
     }
-    return null;
+    // Reverse: check if option text is a substring of the answer
+    for (const opt of options) {
+      if (opt.text && lower.includes(opt.text.toLowerCase())) return opt;
+    }
+    // Fuzzy: normalize whitespace/special chars and compare
+    const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const normText = normalize(text);
+    let bestMatch = null;
+    let bestScore = 0;
+    for (const opt of options) {
+      if (!opt.text) continue;
+      const normOpt = normalize(opt.text);
+      if (!normOpt) continue;
+      // Check if one contains the other after normalization
+      if (normOpt.includes(normText) || normText.includes(normOpt)) return opt;
+      // Token overlap score
+      const tWords = new Set(text.toLowerCase().split(/\s+/));
+      const oWords = opt.text.toLowerCase().split(/\s+/);
+      const overlap = oWords.filter((w) => tWords.has(w)).length;
+      const score = overlap / Math.max(tWords.size, oWords.length);
+      if (score > bestScore && score > 0.5) {
+        bestScore = score;
+        bestMatch = opt;
+      }
+    }
+    return bestMatch;
   }
 
   function clickElement(el) {
