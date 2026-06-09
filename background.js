@@ -40,17 +40,16 @@ function buildPrompt(selectedText) {
   return `${contextHint}You are an expert tutor. Look at this screenshot of a question (exam, quiz, homework, etc.).
 
 Your job:
-1. Identify the question(s) visible on screen.
-2. Determine the correct answer(s).
+1. Identify the SINGLE question closest to where the user double-clicked.
+2. Determine the correct answer for ONLY that one question.
 3. Return ONLY the answer in a concise format.
 
 Rules:
-- For multiple choice: return the letter(s) and brief text, e.g. "C. 2x + 2"
+- For multiple choice: return the letter and brief text, e.g. "C. 2x + 2"
 - For multiple select: return all correct letters, e.g. "A, C"
 - For fill-in-the-blank: return just the answer value
-- For matching: return each pair, e.g. "CO2 → Reactant, H2O → Reactant, O2 → Product, C6H12O6 → Primary energy storage"
-- For short answer / essay: provide a concise but complete answer (2-4 sentences for short answer, a paragraph for essay)
-- If multiple questions are visible, answer ALL of them, numbered.
+- For short answer / essay: provide a concise but complete answer
+- Answer ONLY ONE question — the one nearest to the user's click.
 - Be direct. No preamble or explanation unless the question asks for it.
 - If you cannot determine the answer with confidence, say "Uncertain: " followed by your best guess.`;
 }

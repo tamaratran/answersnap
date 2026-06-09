@@ -80,9 +80,9 @@
     }
   }
 
-  function showAnswer(answer, mode) {
-    // Auto-fill answers on the page
-    autoFillAnswers(answer);
+  function showAnswer(answer, mode, clickTarget) {
+    // Auto-fill the answer on the page for the clicked question
+    autoFillAnswers(answer, clickTarget);
 
     if (mode === "invisible") {
       navigator.clipboard.writeText(answer).catch(() => {});
@@ -139,30 +139,53 @@
 
   // ── Auto-Fill Logic ──────────────────────────────────────────────────────
 
-  function autoFillAnswers(answerText) {
+  function autoFillAnswers(answerText, clickTarget) {
     const parsed = parseAnswerLines(answerText);
+    if (parsed.length === 0) return;
+
+    const entry = parsed[0];
     const groups = collectOptionGroups();
-    const textInputs = collectTextInputs();
 
-    let textInputIdx = 0;
-    const DELAY_MS = 1500;
+    if (entry.letter) {
+      const el = selectChoice(groups, entry, clickTarget);
+      if (el) highlightElement(el);
+    } else if (entry.value) {
+      const input = findNearestTextInput(clickTarget);
+      if (input) {
+        fillTextInput(input, entry.value);
+        highlightElement(input);
+      }
+    }
+  }
 
-    parsed.reduce((promise, entry, i) => {
-      return promise.then(() => new Promise((resolve) => {
-        setTimeout(() => {
-          if (entry.letter) {
-            const el = selectChoice(groups, entry);
-            if (el) highlightElement(el);
-          } else if (entry.value) {
-            const input = textInputs[textInputIdx];
-            fillText(textInputs, textInputIdx, entry.value);
-            if (input) highlightElement(input);
-            textInputIdx++;
-          }
-          resolve();
-        }, i === 0 ? 0 : DELAY_MS);
-      }));
-    }, Promise.resolve());
+  function findNearestTextInput(clickTarget) {
+    if (!clickTarget) {
+      const inputs = collectTextInputs();
+      return inputs[0] || null;
+    }
+    let el = clickTarget;
+    for (let i = 0; i < 15 && el && el !== document.body; i++) {
+      const input = el.querySelector('input[type="text"]:not(#answersnap-overlay input), textarea:not(#answersnap-overlay textarea)');
+      if (input) return input;
+      el = el.parentElement;
+    }
+    const inputs = collectTextInputs();
+    return inputs[0] || null;
+  }
+
+  function fillTextInput(input, value) {
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype, "value"
+    )?.set || Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype, "value"
+    )?.set;
+    if (nativeSetter) {
+      nativeSetter.call(input, value);
+    } else {
+      input.value = value;
+    }
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   function highlightElement(el) {
@@ -339,10 +362,25 @@
     }
   }
 
-  function selectChoice(groups, entry) {
+  function selectChoice(groups, entry, clickTarget) {
+    // Sort groups by proximity to click target so we pick the nearest question
+    const sorted = clickTarget
+      ? [...groups].sort((a, b) => {
+          const aEl = a.options[0]?.element;
+          const bEl = b.options[0]?.element;
+          if (!aEl || !bEl) return 0;
+          const aRect = aEl.getBoundingClientRect();
+          const bRect = bEl.getBoundingClientRect();
+          const clickRect = clickTarget.getBoundingClientRect();
+          const aDist = Math.abs(aRect.top - clickRect.top);
+          const bDist = Math.abs(bRect.top - clickRect.top);
+          return aDist - bDist;
+        })
+      : groups;
+
     // Priority 1: match by both letter AND text for highest confidence
     if (entry.letter && entry.text) {
-      for (const group of groups) {
+      for (const group of sorted) {
         const byLetter = matchOptionByLetter(group.options, entry.letter);
         if (byLetter && byLetter.text.toLowerCase().includes(entry.text.toLowerCase())) {
           clickElement(byLetter.element);
@@ -351,19 +389,20 @@
       }
     }
 
-    // Priority 2: if we have a question number, try the corresponding group
-    if (entry.questionNum && groups[entry.questionNum - 1]) {
-      const group = groups[entry.questionNum - 1];
-      const match = matchOptionByLetter(group.options, entry.letter);
-      if (match) {
-        clickElement(match.element);
-        return match.element;
+    // Priority 2: letter match on nearest group
+    if (entry.letter) {
+      for (const group of sorted) {
+        const match = matchOptionByLetter(group.options, entry.letter);
+        if (match) {
+          clickElement(match.element);
+          return match.element;
+        }
       }
     }
 
     // Priority 3: match by text content across all groups
     if (entry.text) {
-      for (const group of groups) {
+      for (const group of sorted) {
         const match = matchOptionByText(group.options, entry.text);
         if (match) {
           clickElement(match.element);
@@ -372,18 +411,6 @@
       }
     }
 
-    // Priority 4: fallback to letter-only match on first unselected group
-    for (const group of groups) {
-      const alreadySelected = group.options.some(
-        (o) => o.element.checked || o.element.getAttribute("aria-checked") === "true"
-      );
-      if (alreadySelected) continue;
-      const match = matchOptionByLetter(group.options, entry.letter);
-      if (match) {
-        clickElement(match.element);
-        return match.element;
-      }
-    }
     return null;
   }
 
@@ -417,6 +444,7 @@
     if (e.target.closest("#answersnap-overlay")) return;
 
     const selectedText = window.getSelection()?.toString()?.trim() || "";
+    const clickTarget = e.target;
 
     isLoading = true;
 
@@ -449,7 +477,7 @@
       if (response.error) {
         showError(response.error);
       } else {
-        showAnswer(response.answer, response.displayMode);
+        showAnswer(response.answer, response.displayMode, clickTarget);
       }
     } catch (_err) {
       showError("Failed to get answer. Check your settings.");
