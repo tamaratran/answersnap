@@ -368,7 +368,10 @@
         if (pat.test(opt.text.trim())) return opt;
       }
     }
-    // Positional fallback: A=1st, B=2nd, C=3rd, etc.
+    return null;
+  }
+
+  function matchOptionByPosition(options, letter) {
     const idx = letter.charCodeAt(0) - "A".charCodeAt(0);
     if (idx >= 0 && idx < options.length) return options[idx];
     return null;
@@ -410,17 +413,19 @@
   }
 
   function clickElement(el) {
-    if (el.tagName === "INPUT" && (el.type === "radio" || el.type === "checkbox")) {
+    if (el.tagName === "INPUT" && el.type === "radio") {
       el.checked = true;
       el.dispatchEvent(new Event("change", { bubbles: true }));
       el.dispatchEvent(new Event("input", { bubbles: true }));
       el.click();
+    } else if (el.tagName === "INPUT" && el.type === "checkbox") {
+      // For checkboxes, only click if not already checked (click toggles state)
+      if (!el.checked) {
+        el.click();
+      }
     } else {
       // Google Forms custom elements
       el.click();
-      el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-      el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-      el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     }
   }
 
@@ -466,6 +471,17 @@
     if (entry.text) {
       for (const group of sorted) {
         const match = matchOptionByText(group.options, entry.text);
+        if (match) {
+          clickElement(match.element);
+          return match.element;
+        }
+      }
+    }
+
+    // Priority 4: positional fallback (A=1st, B=2nd) on nearest group
+    if (entry.letter) {
+      for (const group of sorted) {
+        const match = matchOptionByPosition(group.options, entry.letter);
         if (match) {
           clickElement(match.element);
           return match.element;
