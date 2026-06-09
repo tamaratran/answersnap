@@ -3,15 +3,15 @@
  *
  * Handles:
  * 1. Screenshot capture via chrome.tabs.captureVisibleTab
- * 2. Backend API call for AI-powered answers
+ * 2. AI vision API call (OpenAI GPT-4o)
  * 3. Message routing between content script and popup
  */
-
-const API_BASE_URL = "https://answersnap.onrender.com";
 
 const DEFAULT_SETTINGS = {
   enabled: true,
   displayMode: "homework", // "invisible" | "sneaky" | "homework"
+  apiKey: "",
+  model: "gpt-4o",
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -32,22 +32,74 @@ async function captureScreenshot() {
   return dataUrl;
 }
 
-async function queryBackend(screenshotDataUrl, selectedText) {
-  const response = await fetch(`${API_BASE_URL}/answer`, {
+function buildPrompt(selectedText) {
+  const contextHint = selectedText
+    ? `The user double-clicked near this text: "${selectedText}"\n\n`
+    : "";
+
+  return `${contextHint}You are an expert tutor. Look at this screenshot of a question (exam, quiz, homework, etc.).
+
+Your job:
+1. Identify the SINGLE question closest to where the user double-clicked.
+2. Determine the correct answer for ONLY that one question.
+3. Return ONLY the answer in a concise format.
+
+Rules:
+- For multiple choice: return the letter and brief text, e.g. "C. 2x + 2"
+- For multiple select: return all correct letters, e.g. "A, C"
+- For fill-in-the-blank: return just the answer value
+- For short answer / essay: provide a concise but complete answer
+- Answer ONLY ONE question — the one nearest to the user's click.
+- Be direct. No preamble or explanation unless the question asks for it.
+- If you cannot determine the answer with confidence, say "Uncertain: " followed by your best guess.`;
+}
+
+async function queryAI(screenshotDataUrl, selectedText, settings) {
+  if (!settings.apiKey) {
+    throw new Error("API key not set. Open the AnswerSnap popup to configure.");
+  }
+
+  const base64Image = screenshotDataUrl.split(",")[1];
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${settings.apiKey}`,
+    },
     body: JSON.stringify({
-      screenshot: screenshotDataUrl,
-      selectedText: selectedText || "",
+      model: settings.model,
+      max_tokens: 1024,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: buildPrompt(selectedText),
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/png;base64,${base64Image}`,
+                detail: "high",
+              },
+            },
+          ],
+        },
+      ],
     }),
   });
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || `Server error: ${response.status}`);
+    throw new Error(
+      `OpenAI API error: ${response.status} — ${err.error?.message || response.statusText}`
+    );
   }
 
-  return await response.json();
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content?.trim() || "No answer returned.";
 }
 
 // ── Message Handler ─────────────────────────────────────────────────────────
@@ -88,16 +140,9 @@ async function handleAnswerRequest(message, sendResponse) {
     }
 
     const screenshot = message.screenshot || await captureScreenshot();
-    const result = await queryBackend(screenshot, message.selectedText);
+    const answer = await queryAI(screenshot, message.selectedText, settings);
 
-    sendResponse({
-      answer: result.answer,
-      type: result.type,
-      letter: result.letter,
-      letters: result.letters,
-      answerText: result.answerText,
-      displayMode: settings.displayMode,
-    });
+    sendResponse({ answer, displayMode: settings.displayMode });
   } catch (err) {
     sendResponse({ error: err.message });
   }
