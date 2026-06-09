@@ -147,10 +147,21 @@
 
     // Check if this is a multi-select answer (multiple entries with letters)
     if (parsed.length > 1 && parsed.every((e) => e.letter && e.questionNum === null)) {
-      // Multi-select: check each matching checkbox/option
-      for (const entry of parsed) {
-        const el = selectChoice(groups, entry, clickTarget);
-        if (el) highlightElement(el);
+      // Multi-select: only select within the single nearest group to avoid
+      // cross-question pollution when AI returns answers for multiple questions
+      const nearest = findNearestGroup(groups, clickTarget);
+      if (nearest) {
+        for (const entry of parsed) {
+          const match = entry.letter
+            ? (matchOptionByLetter(nearest.options, entry.letter) ||
+               matchOptionByText(nearest.options, entry.text) ||
+               matchOptionByPosition(nearest.options, entry.letter))
+            : null;
+          if (match) {
+            clickElement(match.element);
+            highlightElement(match.element);
+          }
+        }
       }
       return;
     }
@@ -161,10 +172,19 @@
       const el = selectChoice(groups, entry, clickTarget);
       if (el) highlightElement(el);
     } else if (entry.value) {
-      const input = findNearestTextInput(clickTarget);
-      if (input) {
-        fillTextInput(input, entry.value);
-        highlightElement(input);
+      // First try to match the value against the nearest option group's text
+      // (handles cases like AI returning "11" for a radio option labeled "11")
+      const nearest = findNearestGroup(groups, clickTarget);
+      const textMatch = nearest ? matchOptionByText(nearest.options, entry.value) : null;
+      if (textMatch) {
+        clickElement(textMatch.element);
+        highlightElement(textMatch.element);
+      } else {
+        const input = findNearestTextInput(clickTarget);
+        if (input) {
+          fillTextInput(input, entry.value);
+          highlightElement(input);
+        }
       }
     }
   }
@@ -450,6 +470,24 @@
       if (el.getAttribute("aria-checked") === "true") return;
       el.click();
     }
+  }
+
+  function findNearestGroup(groups, clickTarget) {
+    if (!clickTarget || !groups.length) return groups[0] || null;
+    const clickRect = clickTarget.getBoundingClientRect();
+    let best = null;
+    let bestDist = Infinity;
+    for (const group of groups) {
+      const el = group.options[0]?.element;
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      const dist = Math.abs(rect.top - clickRect.top);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = group;
+      }
+    }
+    return best;
   }
 
   function selectChoice(groups, entry, clickTarget) {
