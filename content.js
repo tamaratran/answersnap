@@ -81,6 +81,9 @@
   }
 
   function showAnswer(answer, mode) {
+    // Auto-fill answers on the page
+    autoFillAnswers(answer);
+
     if (mode === "invisible") {
       navigator.clipboard.writeText(answer).catch(() => {});
       showToast("Answer copied to clipboard");
@@ -134,236 +137,248 @@
     return div.innerHTML;
   }
 
-  // ── Auto-Click Logic ────────────────────────────────────────────────────
+  // ── Auto-Fill Logic ──────────────────────────────────────────────────────
 
-  function autoClickAnswer(response, clickTarget) {
-    const { type, letter, letters, answerText, answer } = response;
+  function autoFillAnswers(answerText) {
+    const parsed = parseAnswerLines(answerText);
+    const groups = collectOptionGroups();
+    const textInputs = collectTextInputs();
 
-    if (type === "multiple_choice" && letter) {
-      const result = clickMultipleChoice(letter, answerText, clickTarget);
-      if (result) return true;
-    }
+    let textInputIdx = 0;
 
-    if (type === "multiple_select" && letters && letters.length > 0) {
-      const result = clickMultipleSelect(letters, answerText, clickTarget);
-      if (result) return true;
-    }
-
-    if (type === "fill_in_blank" && answer) {
-      return fillInBlank(answer, clickTarget);
-    }
-
-    // Fallback: try to match answer text directly against options on the page.
-    // This handles cases where the backend returns answer text but no letter/letters
-    // (e.g., Google Forms which doesn't use A/B/C/D labels).
-    if (answer || answerText) {
-      const textResult = clickByAnswerText(answer || answerText, clickTarget);
-      if (textResult) return true;
-    }
-
-    // Last resort: try filling a text input if one exists near the click target
-    if (answer) {
-      const filled = fillInBlank(answer, clickTarget);
-      if (filled) return true;
-    }
-
-    return false;
-  }
-
-  function clickByAnswerText(answerStr, clickTarget) {
-    const container = findQuestionContainer(clickTarget);
-    const options = findOptionElements(container);
-    if (options.length === 0) return false;
-
-    // Split comma-separated answers (e.g., "Nucleus, Mitochondria, Ribosome")
-    const answerParts = answerStr.split(/,\s*/).map(s => s.trim().toLowerCase()).filter(Boolean);
-    let clicked = false;
-
-    for (const option of options) {
-      const optText = option.text.toLowerCase();
-      for (const part of answerParts) {
-        if (optText === part || optText.includes(part) || part.includes(optText)) {
-          clickElement(option);
-          clicked = true;
-          break;
-        }
+    for (const entry of parsed) {
+      if (entry.letter) {
+        selectChoice(groups, entry);
+      } else if (entry.value) {
+        fillText(textInputs, textInputIdx, entry.value);
+        textInputIdx++;
       }
     }
-    return clicked;
   }
 
-  function clickMultipleChoice(letter, answerText, clickTarget) {
-    // Find the question container — look up from click target
-    const container = findQuestionContainer(clickTarget);
-    const options = findOptionElements(container);
+  function parseAnswerLines(answerText) {
+    const lines = answerText.split("\n").filter((l) => l.trim());
+    const results = [];
 
-    for (const option of options) {
-      if (matchesOption(option, letter, answerText)) {
-        clickElement(option);
-        return true;
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      // Match numbered answer: "1. C. Mitochondria" or "5. 6"
+      const numberedMatch = trimmed.match(/^(\d+)\.\s*(.+)/);
+      let questionNum = null;
+      let answerPart = trimmed;
+
+      if (numberedMatch) {
+        questionNum = parseInt(numberedMatch[1]);
+        answerPart = numberedMatch[2].trim();
       }
-    }
-    return false;
-  }
 
-  function clickMultipleSelect(letters, _answerText, clickTarget) {
-    const container = findQuestionContainer(clickTarget);
-    const options = findOptionElements(container);
-    let clicked = false;
+      // Check if it starts with a letter option: "C. Mitochondria"
+      const letterMatch = answerPart.match(/^([A-Za-z])\.\s*(.*)/);
 
-    for (const option of options) {
-      for (const letter of letters) {
-        if (matchesOption(option, letter, null)) {
-          clickElement(option);
-          clicked = true;
-          break;
-        }
-      }
-    }
-    return clicked;
-  }
-
-  function fillInBlank(answer, clickTarget) {
-    const inputSelector = 'input[type="text"], input:not([type]), textarea, [contenteditable="true"]';
-    // Find nearest input/textarea to the click target
-    const container = findQuestionContainer(clickTarget);
-    let inputs = container.querySelectorAll(inputSelector);
-
-    // If no inputs found in container, walk up from the click target more aggressively
-    if (inputs.length === 0) {
-      let parent = clickTarget;
-      for (let i = 0; i < 15 && parent && parent !== document.body; i++) {
-        inputs = parent.querySelectorAll(inputSelector);
-        if (inputs.length > 0) break;
-        parent = parent.parentElement;
-      }
-    }
-
-    if (inputs.length > 0) {
-      const input = inputs[0];
-      if (input.getAttribute("contenteditable") === "true") {
-        input.textContent = answer;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
+      if (letterMatch) {
+        results.push({
+          questionNum,
+          letter: letterMatch[1].toUpperCase(),
+          text: letterMatch[2].trim(),
+          value: null,
+        });
       } else {
-        const nativeInputValueSetter = input instanceof HTMLTextAreaElement
-          ? Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set
-          : Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+        results.push({
+          questionNum,
+          letter: null,
+          text: null,
+          value: answerPart,
+        });
+      }
+    }
+    return results;
+  }
 
-        if (nativeInputValueSetter) {
-          nativeInputValueSetter.call(input, answer);
-        } else {
-          input.value = answer;
+  function collectOptionGroups() {
+    const groups = [];
+
+    // Standard HTML radio groups
+    const radioNames = new Set();
+    document.querySelectorAll('input[type="radio"]').forEach((r) => {
+      if (r.name) radioNames.add(r.name);
+    });
+
+    for (const name of radioNames) {
+      const radios = [...document.querySelectorAll(`input[type="radio"][name="${name}"]`)];
+      const options = radios.map((radio) => {
+        const label =
+          document.querySelector(`label[for="${radio.id}"]`) ||
+          radio.closest("label") ||
+          radio.parentElement?.querySelector("label");
+        const text = label?.textContent?.trim() || "";
+        return { element: radio, label, text };
+      });
+      groups.push({ type: "radio", options });
+    }
+
+    // Google Forms: div[role="radiogroup"] with div[role="radio"] children
+    document.querySelectorAll('[role="radiogroup"]').forEach((rg) => {
+      const items = [...rg.querySelectorAll('[role="radio"], [data-value]')];
+      if (!items.length) return;
+      const options = items.map((el) => {
+        const text = el.textContent?.trim() || el.getAttribute("data-value") || "";
+        return { element: el, label: el, text };
+      });
+      groups.push({ type: "gforms-radio", options });
+    });
+
+    // Google Forms: div[role="listbox"] with div[role="option"]
+    document.querySelectorAll('[role="listbox"]').forEach((lb) => {
+      const items = [...lb.querySelectorAll('[role="option"]')];
+      if (!items.length) return;
+      const options = items.map((el) => ({
+        element: el,
+        label: el,
+        text: el.textContent?.trim() || "",
+      }));
+      groups.push({ type: "gforms-select", options });
+    });
+
+    // Checkbox groups
+    const checkNames = new Set();
+    document.querySelectorAll('input[type="checkbox"]').forEach((c) => {
+      if (c.name && !c.closest("#answersnap-overlay")) checkNames.add(c.name);
+    });
+    for (const name of checkNames) {
+      const checks = [
+        ...document.querySelectorAll(`input[type="checkbox"][name="${name}"]`),
+      ];
+      const options = checks.map((cb) => {
+        const label =
+          document.querySelector(`label[for="${cb.id}"]`) ||
+          cb.closest("label") ||
+          cb.parentElement?.querySelector("label");
+        return { element: cb, label, text: label?.textContent?.trim() || "" };
+      });
+      groups.push({ type: "checkbox", options });
+    }
+
+    return groups;
+  }
+
+  function collectTextInputs() {
+    const inputs = [];
+    document
+      .querySelectorAll(
+        'input[type="text"]:not(#answersnap-overlay input), textarea:not(#answersnap-overlay textarea)'
+      )
+      .forEach((el) => {
+        if (!el.closest("#answersnap-overlay")) inputs.push(el);
+      });
+    return inputs;
+  }
+
+  function matchOptionByLetter(options, letter) {
+    // Match label text that starts with the letter: "C. Mitochondria", "(C)", etc.
+    const patterns = [
+      new RegExp(`^${letter}[.):\\s]`, "i"),
+      new RegExp(`\\(${letter}\\)`, "i"),
+    ];
+    for (const opt of options) {
+      for (const pat of patterns) {
+        if (pat.test(opt.text.trim())) return opt;
+      }
+    }
+    return null;
+  }
+
+  function matchOptionByText(options, text) {
+    if (!text) return null;
+    const lower = text.toLowerCase();
+    // Exact substring match
+    for (const opt of options) {
+      if (opt.text.toLowerCase().includes(lower)) return opt;
+    }
+    return null;
+  }
+
+  function clickElement(el) {
+    if (el.tagName === "INPUT" && (el.type === "radio" || el.type === "checkbox")) {
+      el.checked = true;
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.click();
+    } else {
+      // Google Forms custom elements
+      el.click();
+      el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    }
+  }
+
+  function selectChoice(groups, entry) {
+    // Priority 1: match by both letter AND text for highest confidence
+    if (entry.letter && entry.text) {
+      for (const group of groups) {
+        const byLetter = matchOptionByLetter(group.options, entry.letter);
+        if (byLetter && byLetter.text.toLowerCase().includes(entry.text.toLowerCase())) {
+          clickElement(byLetter.element);
+          return;
         }
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-        input.dispatchEvent(new Event("change", { bubbles: true }));
       }
-      return true;
     }
-    return false;
-  }
 
-  function findQuestionContainer(el) {
-    // Walk up the DOM to find a container that likely holds the question + options
-    let current = el;
-    const containerSelectors = [
-      "[class*='question']", "[class*='Question']",
-      "[class*='problem']", "[class*='Problem']",
-      "[role='group']", "[role='radiogroup']",
-      "fieldset", "form",
-      "[class*='quiz']", "[class*='Quiz']",
-      "[class*='item']", "[class*='card']",
-    ];
-
-    for (let i = 0; i < 10 && current && current !== document.body; i++) {
-      for (const sel of containerSelectors) {
-        if (current.matches(sel)) return current;
+    // Priority 2: if we have a question number, try the corresponding group
+    if (entry.questionNum && groups[entry.questionNum - 1]) {
+      const group = groups[entry.questionNum - 1];
+      const match = matchOptionByLetter(group.options, entry.letter);
+      if (match) {
+        clickElement(match.element);
+        return;
       }
-      // If current element contains multiple radio/checkbox inputs, it's likely the container
-      const inputs = current.querySelectorAll('input[type="radio"], input[type="checkbox"]');
-      if (inputs.length >= 2) return current;
-      // Google Forms uses div[role="radio"] and div[role="checkbox"] instead of inputs
-      const ariaInputs = current.querySelectorAll('[role="radio"], [role="checkbox"]');
-      if (ariaInputs.length >= 2) return current;
-      current = current.parentElement;
     }
 
-    // Fallback: return a wide area around the click
-    return el.closest("form") || el.closest("fieldset") || el.closest("section") || document.body;
-  }
-
-  function findOptionElements(container) {
-    // Gather all clickable option-like elements
-    const options = [];
-
-    // Radio buttons and checkboxes (with labels)
-    const inputs = container.querySelectorAll('input[type="radio"], input[type="checkbox"]');
-    for (const input of inputs) {
-      const label = input.closest("label") || container.querySelector(`label[for="${input.id}"]`);
-      options.push({ element: label || input, input, text: (label || input.parentElement)?.textContent?.trim() || "" });
+    // Priority 3: match by text content across all groups
+    if (entry.text) {
+      for (const group of groups) {
+        const match = matchOptionByText(group.options, entry.text);
+        if (match) {
+          clickElement(match.element);
+          return;
+        }
+      }
     }
 
-    // If no inputs found, look for clickable option elements (custom UIs)
-    if (options.length === 0) {
-      const optionEls = container.querySelectorAll(
-        '[class*="option"], [class*="answer"], [class*="choice"], [role="option"], [role="radio"], [role="checkbox"], li'
+    // Priority 4: fallback to letter-only match on first unselected group
+    for (const group of groups) {
+      const alreadySelected = group.options.some(
+        (o) => o.element.checked || o.element.getAttribute("aria-checked") === "true"
       );
-      for (const el of optionEls) {
-        const text = el.textContent?.trim()
-          || el.getAttribute("data-value")
-          || el.getAttribute("aria-label")
-          || "";
-        options.push({ element: el, input: null, text });
+      if (alreadySelected) continue;
+      const match = matchOptionByLetter(group.options, entry.letter);
+      if (match) {
+        clickElement(match.element);
+        return;
       }
     }
-
-    return options;
   }
 
-  function matchesOption(option, letter, answerText) {
-    const text = option.text.toLowerCase();
-    const letterLower = letter.toLowerCase();
+  function fillText(textInputs, idx, value) {
+    const input = textInputs[idx];
+    if (!input) return;
 
-    // Match by letter prefix: "A.", "A)", "A ", "(A)"
-    const letterPatterns = [
-      `${letterLower}.`, `${letterLower})`, `(${letterLower})`,
-      `${letterLower} `, `${letter}.`, `${letter})`, `(${letter})`,
-    ];
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value"
+    )?.set || Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      "value"
+    )?.set;
 
-    for (const pattern of letterPatterns) {
-      if (text.startsWith(pattern)) {
-        return true;
-      }
+    if (nativeSetter) {
+      nativeSetter.call(input, value);
+    } else {
+      input.value = value;
     }
-
-    // Match by answer text content
-    if (answerText && text.includes(answerText.toLowerCase())) {
-      return true;
-    }
-
-    // Match by input value attribute
-    if (option.input) {
-      const val = (option.input.value || "").toLowerCase();
-      if (val === letterLower || val === answerText?.toLowerCase()) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  function clickElement(option) {
-    const el = option.input || option.element;
-    // Dispatch mouse events in natural order for frameworks that listen on these
-    el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-    el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-    el.click();
-
-    // For inputs, ensure change event fires
-    if (option.input) {
-      option.input.checked = true;
-      option.input.dispatchEvent(new Event("change", { bubbles: true }));
-      option.input.dispatchEvent(new Event("input", { bubbles: true }));
-    }
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   // ── Double-Click Handler ────────────────────────────────────────────────
@@ -375,7 +390,6 @@
     if (e.target.closest("#answersnap-overlay")) return;
 
     const selectedText = window.getSelection()?.toString()?.trim() || "";
-    const clickTarget = e.target;
 
     isLoading = true;
 
@@ -391,11 +405,9 @@
     }
 
     // Now show the loading indicator
-    let displayMode = "homework";
     try {
       const settings = await sendMessage({ type: "GET_SETTINGS" });
-      displayMode = settings.displayMode;
-      showLoading(displayMode);
+      showLoading(settings.displayMode);
     } catch {
       showLoading("homework");
     }
@@ -410,16 +422,7 @@
       if (response.error) {
         showError(response.error);
       } else {
-        // Try to auto-click the correct answer
-        const clicked = autoClickAnswer(response, clickTarget);
-
-        if (clicked) {
-          showToast("Answer selected!");
-          hideOverlay();
-        } else {
-          // Fallback: show the answer in overlay (for non-clickable questions)
-          showAnswer(response.answer, response.displayMode);
-        }
+        showAnswer(response.answer, response.displayMode);
       }
     } catch (_err) {
       showError("Failed to get answer. Check your settings.");
