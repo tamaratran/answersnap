@@ -145,21 +145,36 @@
     const textInputs = collectTextInputs();
 
     let textInputIdx = 0;
-    const DELAY_MS = 600;
+    const DELAY_MS = 800;
 
     parsed.reduce((promise, entry, i) => {
       return promise.then(() => new Promise((resolve) => {
         setTimeout(() => {
           if (entry.letter) {
-            selectChoice(groups, entry);
+            const el = selectChoice(groups, entry);
+            if (el) highlightElement(el);
           } else if (entry.value) {
+            const input = textInputs[textInputIdx];
             fillText(textInputs, textInputIdx, entry.value);
+            if (input) highlightElement(input);
             textInputIdx++;
           }
           resolve();
         }, i === 0 ? 0 : DELAY_MS);
       }));
     }, Promise.resolve());
+  }
+
+  function highlightElement(el) {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const target = el.closest("label") || el.closest("div") || el;
+    const prev = target.style.cssText;
+    target.style.transition = "background-color 0.3s ease";
+    target.style.backgroundColor = "rgba(66, 133, 244, 0.25)";
+    setTimeout(() => {
+      target.style.backgroundColor = "";
+      setTimeout(() => { target.style.cssText = prev; }, 300);
+    }, 500);
   }
 
   function parseAnswerLines(answerText) {
@@ -326,7 +341,7 @@
         const byLetter = matchOptionByLetter(group.options, entry.letter);
         if (byLetter && byLetter.text.toLowerCase().includes(entry.text.toLowerCase())) {
           clickElement(byLetter.element);
-          return;
+          return byLetter.element;
         }
       }
     }
@@ -337,7 +352,7 @@
       const match = matchOptionByLetter(group.options, entry.letter);
       if (match) {
         clickElement(match.element);
-        return;
+        return match.element;
       }
     }
 
@@ -347,7 +362,7 @@
         const match = matchOptionByText(group.options, entry.text);
         if (match) {
           clickElement(match.element);
-          return;
+          return match.element;
         }
       }
     }
@@ -361,9 +376,10 @@
       const match = matchOptionByLetter(group.options, entry.letter);
       if (match) {
         clickElement(match.element);
-        return;
+        return match.element;
       }
     }
+    return null;
   }
 
   function fillText(textInputs, idx, value) {
