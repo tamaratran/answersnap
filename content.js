@@ -143,8 +143,19 @@
     const parsed = parseAnswerLines(answerText);
     if (parsed.length === 0) return;
 
-    const entry = parsed[0];
     const groups = collectOptionGroups();
+
+    // Check if this is a multi-select answer (multiple entries with letters)
+    if (parsed.length > 1 && parsed.every((e) => e.letter && e.questionNum === null)) {
+      // Multi-select: check each matching checkbox/option
+      for (const entry of parsed) {
+        const el = selectChoice(groups, entry, clickTarget);
+        if (el) highlightElement(el);
+      }
+      return;
+    }
+
+    const entry = parsed[0];
 
     if (entry.letter) {
       const el = selectChoice(groups, entry, clickTarget);
@@ -212,6 +223,16 @@
     for (const line of lines) {
       const trimmed = line.trim();
 
+      // Check for comma-separated multi-select: "A, C" or "A, C, D"
+      const multiMatch = trimmed.match(/^([A-Za-z])(?:\s*,\s*[A-Za-z])+$/);
+      if (multiMatch) {
+        const letters = trimmed.split(/\s*,\s*/);
+        for (const l of letters) {
+          results.push({ questionNum: null, letter: l.trim().toUpperCase(), text: null, value: null });
+        }
+        continue;
+      }
+
       // Match numbered answer: "1. C. Mitochondria" or "5. 6"
       const numberedMatch = trimmed.match(/^(\d+)\.\s*(.+)/);
       let questionNum = null;
@@ -271,11 +292,46 @@
       const items = [...rg.querySelectorAll('[role="radio"], [data-value]')];
       if (!items.length) return;
       const options = items.map((el) => {
-        const text = el.textContent?.trim() || el.getAttribute("data-value") || "";
-        return { element: el, label: el, text };
+        const label = el.closest("label");
+        const text = el.textContent?.trim() || el.getAttribute("data-value") || el.getAttribute("aria-label") || label?.textContent?.trim() || "";
+        return { element: el, label: label || el, text };
       });
       groups.push({ type: "gforms-radio", options });
     });
+
+    // Google Forms: collect checkbox groups from div[role="checkbox"] elements
+    // Group checkboxes by their nearest common container that doesn't also contain radios
+    const allCheckboxes = [...document.querySelectorAll('[role="checkbox"]')].filter(
+      (el) => !el.closest("#answersnap-overlay")
+    );
+    if (allCheckboxes.length) {
+      // Find the tightest container for each checkbox group
+      const seen = new Set();
+      allCheckboxes.forEach((cb) => {
+        if (seen.has(cb)) return;
+        // Walk up to find a container holding these checkboxes but not radios
+        let container = cb.parentElement;
+        while (container && container !== document.body) {
+          const cbs = container.querySelectorAll('[role="checkbox"]');
+          const radios = container.querySelectorAll('[role="radio"]');
+          if (cbs.length > 0 && radios.length === 0) break;
+          container = container.parentElement;
+        }
+        if (!container || container === document.body) container = cb.parentElement;
+        const items = [...container.querySelectorAll('[role="checkbox"]')];
+        const key = items.map((el) => el.getAttribute("aria-label")).join(",");
+        if (!seen.has(key)) {
+          seen.add(key);
+          items.forEach((el) => seen.add(el));
+          const options = items.map((el) => {
+            const label = el.closest("label");
+            const text = el.getAttribute("aria-label") || el.textContent?.trim() || el.getAttribute("data-value") || label?.textContent?.trim() || "";
+            return { element: el, label: label || el, text };
+          });
+          groups.push({ type: "gforms-checkbox", options });
+        }
+      });
+    }
 
     // Google Forms: div[role="listbox"] with div[role="option"]
     document.querySelectorAll('[role="listbox"]').forEach((lb) => {
@@ -337,6 +393,12 @@
     return null;
   }
 
+  function matchOptionByPosition(options, letter) {
+    const idx = letter.charCodeAt(0) - "A".charCodeAt(0);
+    if (idx >= 0 && idx < options.length) return options[idx];
+    return null;
+  }
+
   function matchOptionByText(options, text) {
     if (!text) return null;
     const lower = text.toLowerCase();
@@ -344,21 +406,49 @@
     for (const opt of options) {
       if (opt.text.toLowerCase().includes(lower)) return opt;
     }
-    return null;
+    // Reverse: check if option text is a substring of the answer
+    for (const opt of options) {
+      if (opt.text && lower.includes(opt.text.toLowerCase())) return opt;
+    }
+    // Fuzzy: normalize whitespace/special chars and compare
+    const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const normText = normalize(text);
+    let bestMatch = null;
+    let bestScore = 0;
+    for (const opt of options) {
+      if (!opt.text) continue;
+      const normOpt = normalize(opt.text);
+      if (!normOpt) continue;
+      // Check if one contains the other after normalization
+      if (normOpt.includes(normText) || normText.includes(normOpt)) return opt;
+      // Token overlap score
+      const tWords = new Set(text.toLowerCase().split(/\s+/));
+      const oWords = opt.text.toLowerCase().split(/\s+/);
+      const overlap = oWords.filter((w) => tWords.has(w)).length;
+      const score = overlap / Math.max(tWords.size, oWords.length);
+      if (score > bestScore && score > 0.5) {
+        bestScore = score;
+        bestMatch = opt;
+      }
+    }
+    return bestMatch;
   }
 
   function clickElement(el) {
-    if (el.tagName === "INPUT" && (el.type === "radio" || el.type === "checkbox")) {
+    if (el.tagName === "INPUT" && el.type === "radio") {
       el.checked = true;
       el.dispatchEvent(new Event("change", { bubbles: true }));
       el.dispatchEvent(new Event("input", { bubbles: true }));
       el.click();
+    } else if (el.tagName === "INPUT" && el.type === "checkbox") {
+      // For checkboxes, only click if not already checked (click toggles state)
+      if (!el.checked) {
+        el.click();
+      }
     } else {
-      // Google Forms custom elements
+      // Google Forms custom elements – skip if already checked
+      if (el.getAttribute("aria-checked") === "true") return;
       el.click();
-      el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-      el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-      el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     }
   }
 
@@ -404,6 +494,17 @@
     if (entry.text) {
       for (const group of sorted) {
         const match = matchOptionByText(group.options, entry.text);
+        if (match) {
+          clickElement(match.element);
+          return match.element;
+        }
+      }
+    }
+
+    // Priority 4: positional fallback (A=1st, B=2nd) on nearest group
+    if (entry.letter) {
+      for (const group of sorted) {
+        const match = matchOptionByPosition(group.options, entry.letter);
         if (match) {
           clickElement(match.element);
           return match.element;
