@@ -146,7 +146,7 @@
     const groups = collectOptionGroups();
 
     // Check if this is a multi-select answer (multiple entries with letters)
-    if (parsed.length > 1 && parsed.every((e) => e.letter)) {
+    if (parsed.length > 1 && parsed.every((e) => e.letter && e.questionNum === null)) {
       // Multi-select: check each matching checkbox/option
       for (const entry of parsed) {
         const el = selectChoice(groups, entry, clickTarget);
@@ -446,7 +446,8 @@
         el.click();
       }
     } else {
-      // Google Forms custom elements
+      // Google Forms custom elements – skip if already checked
+      if (el.getAttribute("aria-checked") === "true") return;
       el.click();
     }
   }
