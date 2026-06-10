@@ -556,6 +556,11 @@
     let screenshot;
     try {
       screenshot = await sendMessage({ type: "CAPTURE_SCREENSHOT" });
+      if (screenshot && screenshot.error) {
+        showError(screenshot.error);
+        isLoading = false;
+        return;
+      }
     } catch {
       showError("Failed to capture screenshot.");
       isLoading = false;
@@ -591,11 +596,17 @@
 
   // ── Message Helpers ─────────────────────────────────────────────────────
 
-  function sendMessage(msg) {
+  function sendMessage(msg, retries = 2) {
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(msg, (response) => {
         if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
+          if (retries > 0) {
+            setTimeout(() => {
+              sendMessage(msg, retries - 1).then(resolve).catch(reject);
+            }, 200);
+          } else {
+            reject(new Error(chrome.runtime.lastError.message));
+          }
         } else {
           resolve(response);
         }
