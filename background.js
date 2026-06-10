@@ -55,21 +55,47 @@ async function queryBackend(screenshotDataUrl, selectedText) {
   return data.answer || "No answer returned.";
 }
 
-// ── Message Handler ─────────────────────────────────────────────────────────
+// ── Port Handler (content script) ────────────────────────────────────────────
+// Content script uses chrome.runtime.connect() which reliably wakes the
+// service worker even after it goes inactive in MV3.
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== "answersnap") return;
+
+  port.onMessage.addListener((message) => {
+    handlePortMessage(message, port);
+  });
+});
+
+async function handlePortMessage(message, port) {
+  try {
+    if (message.type === "CAPTURE_SCREENSHOT") {
+      const result = await captureScreenshot().catch((err) => ({ error: err.message }));
+      port.postMessage(result);
+    } else if (message.type === "ANSWER_REQUEST") {
+      const settings = await getSettings();
+      if (!settings.enabled) {
+        port.postMessage({ error: "AnswerSnap is disabled." });
+        return;
+      }
+      const screenshot = message.screenshot || await captureScreenshot();
+      const answer = await queryBackend(screenshot, message.selectedText);
+      port.postMessage({ answer, displayMode: settings.displayMode });
+    } else if (message.type === "GET_SETTINGS") {
+      const settings = await getSettings();
+      port.postMessage(settings);
+    } else if (message.type === "SAVE_SETTINGS") {
+      await chrome.storage.local.set({ settings: message.settings });
+      port.postMessage({ ok: true });
+    }
+  } catch (err) {
+    port.postMessage({ error: err.message });
+  }
+}
+
+// ── Message Handler (popup) ─────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === "CAPTURE_SCREENSHOT") {
-    captureScreenshot().then(sendResponse).catch((err) => {
-      sendResponse({ error: err.message });
-    });
-    return true;
-  }
-
-  if (message.type === "ANSWER_REQUEST") {
-    handleAnswerRequest(message, sendResponse);
-    return true;
-  }
-
   if (message.type === "GET_SETTINGS") {
     getSettings().then(sendResponse);
     return true;
@@ -82,24 +108,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 });
-
-async function handleAnswerRequest(message, sendResponse) {
-  try {
-    const settings = await getSettings();
-
-    if (!settings.enabled) {
-      sendResponse({ error: "AnswerSnap is disabled." });
-      return;
-    }
-
-    const screenshot = message.screenshot || await captureScreenshot();
-    const answer = await queryBackend(screenshot, message.selectedText);
-
-    sendResponse({ answer, displayMode: settings.displayMode });
-  } catch (err) {
-    sendResponse({ error: err.message });
-  }
-}
 
 // ── Keyboard Shortcut ───────────────────────────────────────────────────────
 
