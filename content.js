@@ -596,21 +596,23 @@
 
   // ── Message Helpers ─────────────────────────────────────────────────────
 
-  function sendMessage(msg, retries = 2) {
+  function sendMessage(msg) {
     return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(msg, (response) => {
-        if (chrome.runtime.lastError) {
-          if (retries > 0) {
-            setTimeout(() => {
-              sendMessage(msg, retries - 1).then(resolve).catch(reject);
-            }, 200);
-          } else {
+      try {
+        const port = chrome.runtime.connect({ name: "answersnap" });
+        port.onMessage.addListener((response) => {
+          port.disconnect();
+          resolve(response);
+        });
+        port.onDisconnect.addListener(() => {
+          if (chrome.runtime.lastError) {
             reject(new Error(chrome.runtime.lastError.message));
           }
-        } else {
-          resolve(response);
-        }
-      });
+        });
+        port.postMessage(msg);
+      } catch (err) {
+        reject(new Error(err.message || "Could not connect to service worker"));
+      }
     });
   }
 
