@@ -60,14 +60,12 @@
   }
 
   function showLoading(_mode) {
-    // No overlay — just a subtle toast so the user knows it's working
-    showToast("Analyzing...");
+    // Silent — no UI feedback while loading
   }
 
   function showAnswer(answer, _mode, clickTarget) {
-    // Auto-fill the answer on the page for the clicked question
+    // Auto-fill the answer on the page silently
     autoFillAnswers(answer, clickTarget);
-    showToast("Answer filled");
   }
 
   function showError(message) {
