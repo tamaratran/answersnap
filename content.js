@@ -59,53 +59,19 @@
     return overlay;
   }
 
-  function showLoading(mode) {
-    if (mode === "invisible") return;
-
-    const overlay = createOverlay();
-    const answerEl = overlay.querySelector(".answersnap-answer");
-    answerEl.innerHTML = `
-      <div class="answersnap-loading">
-        <div class="answersnap-spinner"></div>
-        <span>Analyzing...</span>
-      </div>
-    `;
-
-    overlay.classList.remove("answersnap-hidden");
-
-    if (mode === "sneaky") {
-      overlay.classList.add("answersnap-sneaky");
-    } else {
-      overlay.classList.remove("answersnap-sneaky");
-    }
+  function showLoading(_mode) {
+    // No overlay — just a subtle toast so the user knows it's working
+    showToast("Analyzing...");
   }
 
-  function showAnswer(answer, mode, clickTarget) {
+  function showAnswer(answer, _mode, clickTarget) {
     // Auto-fill the answer on the page for the clicked question
     autoFillAnswers(answer, clickTarget);
-
-    if (mode === "invisible") {
-      navigator.clipboard.writeText(answer).catch(() => {});
-      showToast("Answer copied to clipboard");
-      return;
-    }
-
-    const overlay = createOverlay();
-    const answerEl = overlay.querySelector(".answersnap-answer");
-    answerEl.textContent = answer;
-
-    overlay.classList.remove("answersnap-hidden", "answersnap-sneaky");
-
-    if (mode === "sneaky") {
-      overlay.classList.add("answersnap-sneaky");
-    }
+    showToast("Answer filled");
   }
 
   function showError(message) {
-    const overlay = createOverlay();
-    const answerEl = overlay.querySelector(".answersnap-answer");
-    answerEl.innerHTML = `<span class="answersnap-error">${escapeHtml(message)}</span>`;
-    overlay.classList.remove("answersnap-hidden", "answersnap-sneaky");
+    showToast(message);
   }
 
   function hideOverlay() {

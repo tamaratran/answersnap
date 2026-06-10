@@ -1,7 +1,6 @@
 /* AnswerSnap — Content Script Styles */
 
 .answersnap-overlay {
-  display: none !important;
   position: fixed;
   bottom: 20px;
   right: 20px;
@@ -25,9 +24,7 @@
 }
 
 .answersnap-overlay.answersnap-hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(10px);
+  display: none;
 }
 
 .answersnap-overlay.answersnap-sneaky {
