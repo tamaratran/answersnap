@@ -710,3 +710,110 @@ h2 {
     align-items: center;
   }
 }
+
+/* ===== Auth pages (signup / login / dashboard) ===== */
+.auth-section {
+  min-height: calc(100vh - 70px);
+  display: flex;
+  align-items: center;
+  padding: 60px 0;
+}
+
+.auth-card {
+  max-width: 440px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, var(--bg-card), rgba(99, 102, 241, 0.08));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px 36px;
+  text-align: center;
+}
+
+.auth-card h1 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.auth-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 28px;
+}
+
+.auth-card form {
+  text-align: left;
+}
+
+.auth-card label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 14px 0 6px;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.auth-card input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-error {
+  color: #f87171;
+  font-size: 13px;
+  min-height: 18px;
+  margin: 10px 0 4px;
+}
+
+.btn-block {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.auth-switch {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.auth-switch a {
+  color: var(--accent-light);
+  text-decoration: none;
+}
+
+.nav-email {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.dashboard-card {
+  max-width: 520px;
+}
+
+.dash-active {
+  color: #4ade80;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+
+.dash-steps {
+  text-align: left;
+  color: var(--text-secondary);
+  padding-left: 22px;
+  display: grid;
+  gap: 8px;
+}
+
+.hidden {
+  display: none;
+}

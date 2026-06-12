@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Cheatly</title>
+  <meta name="description" content="Your Cheatly account dashboard." />
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" sizes="16x16" href="icon16.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="icon48.png" />
+  <link rel="apple-touch-icon" href="icon128.png" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-logo">
+        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <span>Cheatly</span>
+      </a>
+      <div class="nav-links">
+        <span id="user-email" class="nav-email"></span>
+        <a href="#" id="logout-link">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="auth-section">
+    <div class="container">
+      <div class="auth-card dashboard-card">
+        <h1>Your Dashboard</h1>
+        <p class="auth-subtitle" id="status-line">Loading your account…</p>
+
+        <div id="paywall" class="hidden">
+          <div class="pricing-badge">50% Off — Limited Time Offer</div>
+          <div class="pricing-price">
+            <span class="price-old">$19.99</span>
+            <span class="price-new">$9.99</span>
+            <span class="price-period">/week</span>
+          </div>
+          <a href="https://cheatly-backend.fly.dev/checkout" class="btn btn-primary btn-block">Subscribe to Cheatly Pro</a>
+          <p class="auth-switch">Cancel anytime. Satisfaction guaranteed.</p>
+        </div>
+
+        <div id="subscribed" class="hidden">
+          <p class="dash-active">&#10003; Cheatly Pro is active</p>
+          <ol class="dash-steps">
+            <li>Install the Cheatly Chrome extension</li>
+            <li>Double-click any question on any website</li>
+            <li>The answer fills in automatically</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="auth.js"></script>
+  <script>
+    (async () => {
+      try {
+        const me = await api("/api/me");
+        document.getElementById("user-email").textContent = me.email;
+        if (me.subscribed) {
+          document.getElementById("status-line").textContent = "You're all set.";
+          document.getElementById("subscribed").classList.remove("hidden");
+        } else {
+          document.getElementById("status-line").textContent =
+            new URLSearchParams(location.search).get("checkout") === "success"
+              ? "Payment received — your subscription will activate momentarily. Refresh in a few seconds."
+              : "One step left: activate Cheatly Pro.";
+          document.getElementById("paywall").classList.remove("hidden");
+        }
+      } catch (err) {
+        window.location.href = "login.html";
+      }
+    })();
+    document.getElementById("logout-link").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await api("/api/logout", { method: "POST" });
+      window.location.href = "index.html";
+    });
+  </script>
+</body>
+</html>
