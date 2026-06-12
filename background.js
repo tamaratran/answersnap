@@ -7,7 +7,7 @@
  * 3. Message routing between content script and popup
  */
 
-const BACKEND_URL = "https://answersnap-backend.fly.dev";
+const BACKEND_URL = "https://cheatly-backend.fly.dev";
 
 const DEFAULT_SETTINGS = {
   enabled: true,
