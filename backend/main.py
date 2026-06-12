@@ -2,6 +2,7 @@ import os
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 import httpx
 
@@ -17,6 +18,11 @@ app.add_middleware(
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
+LANDING_URL = os.environ.get("LANDING_URL", "https://answersnap.vercel.app")
+STRIPE_CHECKOUT_URL = "https://api.stripe.com/v1/checkout/sessions"
 
 
 class AnswerRequest(BaseModel):
@@ -102,6 +108,37 @@ async def get_answer(req: AnswerRequest):
     answer = data["choices"][0]["message"]["content"].strip()
 
     return AnswerResponse(answer=answer)
+
+
+@app.get("/checkout")
+async def create_checkout():
+    if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+
+    payload = {
+        "mode": "subscription",
+        "line_items[0][price]": STRIPE_PRICE_ID,
+        "line_items[0][quantity]": "1",
+        "success_url": f"{LANDING_URL}/?checkout=success",
+        "cancel_url": f"{LANDING_URL}/?checkout=cancelled",
+        "allow_promotion_codes": "true",
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            STRIPE_CHECKOUT_URL,
+            auth=(STRIPE_SECRET_KEY, ""),
+            data=payload,
+        )
+
+    if resp.status_code != 200:
+        try:
+            detail = resp.json().get("error", {}).get("message", resp.text)
+        except Exception:
+            detail = resp.text
+        raise HTTPException(status_code=resp.status_code, detail=detail)
+
+    return RedirectResponse(resp.json()["url"], status_code=303)
 
 
 @app.get("/health")
