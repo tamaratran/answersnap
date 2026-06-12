@@ -89,6 +89,24 @@ body {
 .hero {
   padding: 160px 0 100px;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 600px;
+  background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.18), transparent 65%);
+  pointer-events: none;
+}
+
+.hero .container {
+  position: relative;
 }
 
 .hero-badge {
@@ -144,14 +162,16 @@ body {
 }
 
 .btn-primary {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent), #7c5cf6);
   color: white;
   border: none;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25);
 }
 
 .btn-primary:hover {
-  background: #5558e6;
-  box-shadow: 0 0 30px var(--accent-glow);
+  filter: brightness(1.1);
+  box-shadow: 0 6px 32px rgba(99, 102, 241, 0.45);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -163,6 +183,7 @@ body {
 .btn-secondary:hover {
   border-color: var(--accent);
   color: var(--accent-light);
+  transform: translateY(-1px);
 }
 
 .hero-trust {
@@ -182,9 +203,15 @@ body {
   padding: 4px 12px;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 100px;
   font-size: 12px;
   color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.trust-item:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
 }
 
 /* Sections */
@@ -197,6 +224,7 @@ h2 {
   font-weight: 700;
   text-align: center;
   margin-bottom: 12px;
+  letter-spacing: -0.02em;
 }
 
 .section-subtitle {
@@ -524,6 +552,22 @@ h2 {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 28px;
+  transition: all 0.2s;
+}
+
+.testimonial-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.testimonial-card::before {
+  content: "\201C";
+  display: block;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--accent-light);
+  font-family: Georgia, serif;
+  margin-bottom: 8px;
 }
 
 .testimonial-quote {
