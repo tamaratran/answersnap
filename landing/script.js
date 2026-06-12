@@ -1,5 +1,5 @@
 /**
- * AnswerSnap — Landing Page Interactivity
+ * Cheatly — Landing Page Interactivity
  */
 
 // Demo cards: double-click to reveal answers
