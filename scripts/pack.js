@@ -2,7 +2,7 @@
  * Packages the extension into a ZIP file ready for Chrome Web Store upload.
  *
  * Usage: node scripts/pack.js
- * Output: dist/answersnap-<version>.zip
+ * Output: dist/cheatly-<version>.zip
  */
 
 import { execSync } from "node:child_process";
@@ -21,7 +21,7 @@ if (!existsSync(distDir)) {
   mkdirSync(distDir, { recursive: true });
 }
 
-const outFile = resolve(distDir, `answersnap-${version}.zip`);
+const outFile = resolve(distDir, `cheatly-${version}.zip`);
 
 const includeFiles = [
   "manifest.json",
@@ -41,4 +41,4 @@ const fileList = includeFiles.join(" ");
 
 execSync(`cd "${root}" && zip "${outFile}" ${fileList}`, { stdio: "inherit" });
 
-console.log(`\nPackaged: dist/answersnap-${version}.zip`);
+console.log(`\nPackaged: dist/cheatly-${version}.zip`);

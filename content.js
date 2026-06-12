@@ -1,5 +1,5 @@
 /**
- * AnswerSnap — Content Script
+ * Cheatly — Content Script
  *
  * Injected into every page. Listens for double-click events,
  * communicates with the background service worker, and renders
@@ -23,7 +23,7 @@
     overlay.className = "answersnap-overlay answersnap-hidden";
     overlay.innerHTML = `
       <div class="answersnap-header">
-        <span class="answersnap-title">AnswerSnap</span>
+        <span class="answersnap-title">Cheatly</span>
         <div class="answersnap-actions">
           <button class="answersnap-copy" title="Copy answer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -621,7 +621,7 @@
     if (message.type === "TOGGLE_STATE") {
       enabled = message.enabled;
       if (!enabled) hideOverlay();
-      showToast(enabled ? "AnswerSnap ON" : "AnswerSnap OFF");
+      showToast(enabled ? "Cheatly ON" : "Cheatly OFF");
     }
   });
 

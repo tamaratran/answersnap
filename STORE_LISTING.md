@@ -1,18 +1,18 @@
-# Chrome Web Store Listing — AnswerSnap
+# Chrome Web Store Listing — Cheatly
 
 Use this file when filling out the Chrome Web Store Developer Dashboard.
 
 ---
 
 ## Extension Name
-AnswerSnap
+Cheatly
 
 ## Short Description (132 chars max)
 AI-powered quiz helper. Double-click any question to instantly get the answer. Auto-clicks multiple choice, fills in blanks, and more.
 
 ## Detailed Description
 
-AnswerSnap is an AI-powered Chrome extension that answers quiz questions instantly. Just double-click any question on any webpage — AnswerSnap screenshots the page, sends it to an AI vision model, and automatically selects the correct answer for you.
+Cheatly is an AI-powered Chrome extension that answers quiz questions instantly. Just double-click any question on any webpage — Cheatly screenshots the page, sends it to an AI vision model, and automatically selects the correct answer for you.
 
 **How it works:**
 1. Double-click on any quiz question
@@ -61,7 +61,7 @@ English
 ## Privacy
 
 **Single Purpose Description:**
-AnswerSnap helps users answer quiz questions by analyzing screenshots of quiz pages using AI and automatically selecting or typing the correct answer.
+Cheatly helps users answer quiz questions by analyzing screenshots of quiz pages using AI and automatically selecting or typing the correct answer.
 
 **Permissions Justification:**
 - `activeTab`: To capture a screenshot of the current tab when the user double-clicks
