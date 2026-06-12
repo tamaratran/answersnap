@@ -1,5 +1,5 @@
 /**
- * AnswerSnap — Background Service Worker
+ * Cheatly — Background Service Worker
  *
  * Handles:
  * 1. Screenshot capture via chrome.tabs.captureVisibleTab
@@ -75,7 +75,7 @@ async function handlePortMessage(message, port) {
     } else if (message.type === "ANSWER_REQUEST") {
       const settings = await getSettings();
       if (!settings.enabled) {
-        port.postMessage({ error: "AnswerSnap is disabled." });
+        port.postMessage({ error: "Cheatly is disabled." });
         return;
       }
       const screenshot = message.screenshot || await captureScreenshot();

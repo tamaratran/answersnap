@@ -1,5 +1,5 @@
 /**
- * AnswerSnap — Popup Script
+ * Cheatly — Popup Script
  *
  * Manages extension settings via chrome.storage.local.
  */
