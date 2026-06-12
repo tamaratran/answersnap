@@ -1,7 +1,11 @@
-app = "answersnap-backend"
+app = "cheatly-backend"
 primary_region = "sjc"
 
 [build]
+
+[mounts]
+  source = "cheatly_data"
+  destination = "/data"
 
 [http_service]
   internal_port = 8080
