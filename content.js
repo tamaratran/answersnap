@@ -114,6 +114,7 @@
       // Multi-select: only select within the single nearest group to avoid
       // cross-question pollution when AI returns answers for multiple questions
       const nearest = findNearestGroup(groups, clickTarget);
+
       if (nearest) {
         for (const entry of parsed) {
           const match = entry.letter
@@ -121,6 +122,7 @@
                matchOptionByText(nearest.options, entry.text) ||
                matchOptionByPosition(nearest.options, entry.letter))
             : null;
+
           if (match) {
             clickElement(match.element);
             highlightElement(match.element);
@@ -293,15 +295,22 @@
       const seen = new Set();
       allCheckboxes.forEach((cb) => {
         if (seen.has(cb)) return;
-        // Walk up to find a container holding these checkboxes but not radios
+        // Walk up to find a container holding multiple checkboxes but no radios.
+        // On Google Forms each checkbox is inside its own <label>, so we must
+        // keep walking past single-checkbox wrappers to reach the real group.
         let container = cb.parentElement;
+        let bestContainer = null;
         while (container && container !== document.body) {
           const cbs = container.querySelectorAll('[role="checkbox"]');
           const radios = container.querySelectorAll('[role="radio"]');
-          if (cbs.length > 0 && radios.length === 0) break;
+          if (radios.length > 0) break;
+          if (cbs.length > 0) {
+            bestContainer = container;
+            if (cbs.length > 1) break;
+          }
           container = container.parentElement;
         }
-        if (!container || container === document.body) container = cb.parentElement;
+        container = bestContainer || cb.parentElement;
         const items = [...container.querySelectorAll('[role="checkbox"]')];
         const key = items.map((el) => el.getAttribute("aria-label")).join(",");
         if (!seen.has(key)) {
