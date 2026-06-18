@@ -184,10 +184,10 @@
   }
 
   function highlightElement(el) {
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.scrollIntoView({ behavior: "instant", block: "nearest" });
     const target = el.closest("label") || el.closest("div") || el;
     const prev = target.style.cssText;
-    target.style.transition = "background-color 0.4s ease, outline 0.2s ease";
+    target.style.transition = "background-color 0.3s ease, outline 0.15s ease";
     target.style.backgroundColor = "rgba(66, 133, 244, 0.35)";
     target.style.outline = "2px solid rgba(66, 133, 244, 0.7)";
     target.style.outlineOffset = "2px";
@@ -196,8 +196,8 @@
       target.style.backgroundColor = "";
       target.style.outline = "";
       target.style.outlineOffset = "";
-      setTimeout(() => { target.style.cssText = prev; }, 400);
-    }, 1000);
+      setTimeout(() => { target.style.cssText = prev; }, 300);
+    }, 600);
   }
 
   function parseAnswerLines(answerText) {
@@ -551,35 +551,12 @@
 
     isLoading = true;
 
-    // Capture screenshot BEFORE showing the loading overlay so it doesn't
-    // appear in the image sent to the AI.
-    let screenshot;
-    try {
-      screenshot = await sendMessage({ type: "CAPTURE_SCREENSHOT" });
-      if (screenshot && screenshot.error) {
-        showError(screenshot.error);
-        isLoading = false;
-        return;
-      }
-    } catch {
-      showError("Failed to capture screenshot.");
-      isLoading = false;
-      return;
-    }
-
-    // Now show the loading indicator
-    try {
-      const settings = await sendMessage({ type: "GET_SETTINGS" });
-      showLoading(settings.displayMode);
-    } catch {
-      showLoading("homework");
-    }
-
+    // Single message: background captures the screenshot and queries the
+    // backend in one hop, avoiding a redundant screenshot round-trip.
     try {
       const response = await sendMessage({
         type: "ANSWER_REQUEST",
         selectedText,
-        screenshot,
       });
 
       if (response.error) {
