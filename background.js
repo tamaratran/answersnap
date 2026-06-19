@@ -26,8 +26,8 @@ async function captureScreenshot() {
   if (!tab?.id) throw new Error("No active tab found");
 
   const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-    format: "png",
-    quality: 90,
+    format: "jpeg",
+    quality: 80,
   });
   return dataUrl;
 }
@@ -78,8 +78,10 @@ async function handlePortMessage(message, port) {
         port.postMessage({ error: "Cheatly is disabled." });
         return;
       }
-      const screenshot = message.screenshot || await captureScreenshot();
+      // Capture screenshot here so it never round-trips through the content script
+      const screenshot = await captureScreenshot();
       const answer = await queryBackend(screenshot, message.selectedText);
+
       port.postMessage({ answer, displayMode: settings.displayMode });
     } else if (message.type === "GET_SETTINGS") {
       const settings = await getSettings();

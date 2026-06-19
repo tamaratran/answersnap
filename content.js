@@ -114,6 +114,7 @@
       // Multi-select: only select within the single nearest group to avoid
       // cross-question pollution when AI returns answers for multiple questions
       const nearest = findNearestGroup(groups, clickTarget);
+
       if (nearest) {
         for (const entry of parsed) {
           const match = entry.letter
@@ -121,6 +122,7 @@
                matchOptionByText(nearest.options, entry.text) ||
                matchOptionByPosition(nearest.options, entry.letter))
             : null;
+
           if (match) {
             clickElement(match.element);
             highlightElement(match.element);
@@ -184,10 +186,10 @@
   }
 
   function highlightElement(el) {
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.scrollIntoView({ behavior: "instant", block: "nearest" });
     const target = el.closest("label") || el.closest("div") || el;
     const prev = target.style.cssText;
-    target.style.transition = "background-color 0.4s ease, outline 0.2s ease";
+    target.style.transition = "background-color 0.3s ease, outline 0.15s ease";
     target.style.backgroundColor = "rgba(66, 133, 244, 0.35)";
     target.style.outline = "2px solid rgba(66, 133, 244, 0.7)";
     target.style.outlineOffset = "2px";
@@ -196,8 +198,8 @@
       target.style.backgroundColor = "";
       target.style.outline = "";
       target.style.outlineOffset = "";
-      setTimeout(() => { target.style.cssText = prev; }, 400);
-    }, 1000);
+      setTimeout(() => { target.style.cssText = prev; }, 300);
+    }, 600);
   }
 
   function parseAnswerLines(answerText) {
@@ -293,15 +295,22 @@
       const seen = new Set();
       allCheckboxes.forEach((cb) => {
         if (seen.has(cb)) return;
-        // Walk up to find a container holding these checkboxes but not radios
+        // Walk up to find a container holding multiple checkboxes but no radios.
+        // On Google Forms each checkbox is inside its own <label>, so we must
+        // keep walking past single-checkbox wrappers to reach the real group.
         let container = cb.parentElement;
+        let bestContainer = null;
         while (container && container !== document.body) {
           const cbs = container.querySelectorAll('[role="checkbox"]');
           const radios = container.querySelectorAll('[role="radio"]');
-          if (cbs.length > 0 && radios.length === 0) break;
+          if (radios.length > 0) break;
+          if (cbs.length > 0) {
+            bestContainer = container;
+            if (cbs.length > 1) break;
+          }
           container = container.parentElement;
         }
-        if (!container || container === document.body) container = cb.parentElement;
+        container = bestContainer || cb.parentElement;
         const items = [...container.querySelectorAll('[role="checkbox"]')];
         const key = items.map((el) => el.getAttribute("aria-label")).join(",");
         if (!seen.has(key)) {
@@ -551,35 +560,12 @@
 
     isLoading = true;
 
-    // Capture screenshot BEFORE showing the loading overlay so it doesn't
-    // appear in the image sent to the AI.
-    let screenshot;
-    try {
-      screenshot = await sendMessage({ type: "CAPTURE_SCREENSHOT" });
-      if (screenshot && screenshot.error) {
-        showError(screenshot.error);
-        isLoading = false;
-        return;
-      }
-    } catch {
-      showError("Failed to capture screenshot.");
-      isLoading = false;
-      return;
-    }
-
-    // Now show the loading indicator
-    try {
-      const settings = await sendMessage({ type: "GET_SETTINGS" });
-      showLoading(settings.displayMode);
-    } catch {
-      showLoading("homework");
-    }
-
+    // Single message: background captures the screenshot and queries the
+    // backend in one hop, avoiding a redundant screenshot round-trip.
     try {
       const response = await sendMessage({
         type: "ANSWER_REQUEST",
         selectedText,
-        screenshot,
       });
 
       if (response.error) {
