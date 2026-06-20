@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Overlay</title>
+  <link rel="stylesheet" href="overlay.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="header">
+      <div class="drag-area">
+        <span class="drag-icon">&#x2801;</span>
+        <span class="title">Cheatly</span>
+      </div>
+      <div class="actions">
+        <button id="copy-btn" class="action-btn" title="Copy answer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+        <button id="close-btn" class="action-btn" title="Hide (Ctrl+Shift+H)">
+          &times;
+        </button>
+      </div>
+    </div>
+    <div id="content">
+      <div id="idle" class="state">
+        <p class="hint">Press <kbd>Ctrl+Shift+A</kbd> to answer</p>
+        <div class="shortcuts">
+          <div><kbd>Ctrl+Shift+A</kbd> — Get answer</div>
+          <div><kbd>Ctrl+Shift+H</kbd> — Show/hide</div>
+          <div><kbd>Ctrl+Shift+E</kbd> — Emergency hide</div>
+          <div><kbd>Ctrl+Shift+Q</kbd> — Quit</div>
+        </div>
+      </div>
+      <div id="loading" class="state hidden">
+        <div class="spinner"></div>
+        <p>Thinking...</p>
+      </div>
+      <div id="answer" class="state hidden">
+        <div id="answer-text"></div>
+      </div>
+      <div id="error" class="state hidden">
+        <p id="error-text" class="error-msg"></p>
+      </div>
+    </div>
+  </div>
+  <script src="overlay.js"></script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+{
+  "name": "system-service-host",
+  "productName": "System Service Host",
+  "version": "1.0.0",
+  "description": "System service helper",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:portable": "electron-builder --win portable"
+  },
+  "author": "Cheatly",
+  "license": "PROPRIETARY",
+  "dependencies": {
+    "screenshot-desktop": "^1.15.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.system.servicehost",
+    "productName": "System Service Host",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "artifactName": "SystemServiceHost-${version}.${ext}"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "assets/icon.icns",
+      "artifactName": "SystemServiceHost-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "shortcutName": "System Service Host"
+    },
+    "files": [
+      "**/*",
+      "!dist/**"
+    ]
+  }
+}
