@@ -9,6 +9,9 @@
 
 const BACKEND_URL = "https://answersnap-backend.fly.dev";
 
+const AUTO_DISABLE_ALARM = "auto-disable";
+const AUTO_DISABLE_MINUTES = 120; // 2 hours
+
 const DEFAULT_SETTINGS = {
   enabled: true,
   displayMode: "homework", // "invisible" | "sneaky" | "homework"
@@ -105,10 +108,58 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "SAVE_SETTINGS") {
     chrome.storage.local.set({ settings: message.settings }).then(() => {
+      // Manage auto-disable timer on settings change from popup
+      if (message.settings.enabled) {
+        startAutoDisableTimer();
+      } else {
+        clearAutoDisableTimer();
+      }
       sendResponse({ ok: true });
     });
     return true;
   }
+});
+
+// ── Auto-Disable Timer ──────────────────────────────────────────────────────
+
+function startAutoDisableTimer() {
+  chrome.alarms.create(AUTO_DISABLE_ALARM, {
+    delayInMinutes: AUTO_DISABLE_MINUTES,
+  });
+}
+
+function clearAutoDisableTimer() {
+  chrome.alarms.clear(AUTO_DISABLE_ALARM);
+}
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== AUTO_DISABLE_ALARM) return;
+
+  const settings = await getSettings();
+  if (!settings.enabled) return; // Already off
+
+  settings.enabled = false;
+  await chrome.storage.local.set({ settings });
+
+  // Notify active tab so toast shows
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id) {
+    chrome.tabs.sendMessage(tab.id, {
+      type: "TOGGLE_STATE",
+      enabled: false,
+    }).catch(() => {});
+  }
+});
+
+// Start timer on install/startup if enabled
+chrome.runtime.onInstalled.addListener(async () => {
+  const settings = await getSettings();
+  if (settings.enabled) startAutoDisableTimer();
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  const settings = await getSettings();
+  if (settings.enabled) startAutoDisableTimer();
 });
 
 // ── Keyboard Shortcut ───────────────────────────────────────────────────────
@@ -118,6 +169,13 @@ chrome.commands.onCommand.addListener(async (command) => {
     const settings = await getSettings();
     settings.enabled = !settings.enabled;
     await chrome.storage.local.set({ settings });
+
+    // Manage auto-disable timer
+    if (settings.enabled) {
+      startAutoDisableTimer();
+    } else {
+      clearAutoDisableTimer();
+    }
 
     const [tab] = await chrome.tabs.query({
       active: true,
