@@ -44,7 +44,9 @@ window.cheatly.onState((data) => {
       break;
     case "answer":
       answerTextEl.textContent = data.answer;
-      if (data.copied) {
+      if (data.status) {
+        clipboardStatus.textContent = data.status;
+      } else if (data.copied) {
         clipboardStatus.textContent = "Copied to clipboard";
       }
       showState("answer");
