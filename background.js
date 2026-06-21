@@ -7,7 +7,7 @@
  * 3. Message routing between content script and popup
  */
 
-const BACKEND_URL = "https://answersnap-backend.fly.dev";
+const BACKEND_URL = "https://cheatly-backend.fly.dev";
 
 const AUTO_DISABLE_ALARM = "auto-disable";
 const AUTO_DISABLE_MINUTES = 120; // 2 hours
