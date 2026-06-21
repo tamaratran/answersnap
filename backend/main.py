@@ -248,7 +248,7 @@ async def create_checkout():
         "mode": "subscription",
         "line_items[0][price]": STRIPE_PRICE_ID,
         "line_items[0][quantity]": "1",
-        "success_url": f"{LANDING_URL}/?checkout=success",
+        "success_url": f"{LANDING_URL}/download.html",
         "cancel_url": f"{LANDING_URL}/?checkout=cancelled",
         "allow_promotion_codes": "true",
     }
