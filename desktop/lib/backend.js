@@ -34,4 +34,32 @@ async function queryBackend(screenshotDataUrl) {
   return data.answer || "No answer returned.";
 }
 
-module.exports = { queryBackend };
+/**
+ * Ask the backend to locate where to click for an MC answer.
+ * Returns {x, y, confidence} or null on failure.
+ */
+async function locateAnswer(screenshotDataUrl, answer, screenWidth, screenHeight) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/locate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        screenshot: screenshotDataUrl,
+        answer,
+        screenWidth,
+        screenHeight,
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return { x: data.x, y: data.y, confidence: data.confidence };
+  } catch (_) {
+    return null;
+  }
+}
+
+module.exports = { queryBackend, locateAnswer };

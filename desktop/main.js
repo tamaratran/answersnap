@@ -8,8 +8,8 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require("electron");
 const path = require("path");
 const { captureScreen } = require("./lib/capture");
-const { queryBackend } = require("./lib/backend");
-const { copyToClipboard, typeAnswer } = require("./lib/autofill");
+const { queryBackend, locateAnswer } = require("./lib/backend");
+const { copyToClipboard, typeAnswer, clickAtPosition, isMCAnswer } = require("./lib/autofill");
 
 // Prevent multiple instances
 const gotTheLock = app.requestSingleInstanceLock();
@@ -122,13 +122,15 @@ async function captureAndAnswer() {
   if (isQuerying) return; // Prevent double-trigger
   isQuerying = true;
 
+  let screenshotBase64 = null;
+
   try {
     // Show overlay with loading state
     overlayWindow.show();
     overlayWindow.webContents.send("state", { type: "loading" });
 
     // Capture the screen (overlay is automatically excluded due to content protection)
-    const screenshotBase64 = await captureScreen();
+    screenshotBase64 = await captureScreen();
 
     // Send to backend
     const answer = await queryBackend(screenshotBase64);
@@ -139,6 +141,9 @@ async function captureAndAnswer() {
 
     // Display the answer
     overlayWindow.webContents.send("state", { type: "answer", answer, copied: true });
+
+    // ── Auto-fill the answer ───────────────────────────────────────────────
+    await autoFillAnswer(answer, screenshotBase64);
   } catch (err) {
     overlayWindow.webContents.send("state", {
       type: "error",
@@ -146,6 +151,78 @@ async function captureAndAnswer() {
     });
   } finally {
     isQuerying = false;
+  }
+}
+
+/**
+ * Automatically fill the answer into the focused application.
+ * - For MC answers: ask backend for click coordinates, then click
+ * - For text answers: type into the focused field
+ */
+async function autoFillAnswer(answer, screenshotBase64) {
+  try {
+    if (isMCAnswer(answer)) {
+      // Multiple choice — locate and click the correct option
+      overlayWindow.webContents.send("state", {
+        type: "answer",
+        answer,
+        copied: true,
+        status: "Clicking answer...",
+      });
+
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width, height } = primaryDisplay.size;
+
+      const coords = await locateAnswer(screenshotBase64, answer, width, height);
+      if (coords && coords.x && coords.y) {
+        // Hide overlay so it doesn't intercept the click
+        overlayWindow.hide();
+        await new Promise((r) => setTimeout(r, 150));
+
+        const clicked = await clickAtPosition(coords.x, coords.y);
+
+        // Show overlay again with result
+        await new Promise((r) => setTimeout(r, 300));
+        overlayWindow.show();
+        overlayWindow.webContents.send("state", {
+          type: "answer",
+          answer,
+          copied: true,
+          status: clicked ? "Auto-clicked!" : "Click failed — answer copied",
+        });
+      } else {
+        overlayWindow.webContents.send("state", {
+          type: "answer",
+          answer,
+          copied: true,
+          status: "Could not locate option — answer copied",
+        });
+      }
+    } else {
+      // Text answer — type it into the focused field
+      overlayWindow.hide();
+      await new Promise((r) => setTimeout(r, 200));
+
+      const result = await typeAnswer(answer);
+
+      await new Promise((r) => setTimeout(r, 200));
+      overlayWindow.show();
+      overlayWindow.webContents.send("state", {
+        type: "answer",
+        answer,
+        copied: true,
+        status: result.method === "typed" ? "Auto-typed!" : "Copied to clipboard",
+      });
+    }
+  } catch (err) {
+    // Auto-fill is best-effort — don't fail the whole flow
+    console.error("Auto-fill error:", err.message);
+    overlayWindow.webContents.send("state", {
+      type: "answer",
+      answer,
+      copied: true,
+      status: "Auto-fill failed — answer copied",
+    });
   }
 }
 

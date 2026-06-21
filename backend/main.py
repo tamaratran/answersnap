@@ -34,6 +34,19 @@ class AnswerResponse(BaseModel):
     answer: str
 
 
+class LocateRequest(BaseModel):
+    screenshot: str
+    answer: str
+    screenWidth: int
+    screenHeight: int
+
+
+class LocateResponse(BaseModel):
+    x: int
+    y: int
+    confidence: str = "medium"
+
+
 def build_prompt(selected_text: str) -> str:
     context_hint = ""
     if selected_text:
@@ -108,6 +121,90 @@ async def get_answer(req: AnswerRequest):
     answer = data["choices"][0]["message"]["content"].strip()
 
     return AnswerResponse(answer=answer)
+
+
+@app.post("/locate", response_model=LocateResponse)
+async def locate_answer(req: LocateRequest):
+    """Given a screenshot and the correct answer, return pixel coordinates to click."""
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="API key not configured")
+
+    screenshot_data = req.screenshot
+    if not screenshot_data.startswith("data:"):
+        screenshot_data = f"data:image/png;base64,{screenshot_data}"
+
+    prompt = (
+        f"The correct answer to the question in this screenshot is: {req.answer}\n\n"
+        f"The screenshot dimensions are {req.screenWidth}x{req.screenHeight} pixels.\n\n"
+        "Your task: Find the UI element (radio button, checkbox, or clickable option) "
+        "that corresponds to this answer.\n\n"
+        "Return ONLY a JSON object with the x,y pixel coordinates of where to click "
+        "to select this answer. The coordinates should be relative to the top-left "
+        "corner of the screenshot.\n\n"
+        'Format: {"x": 123, "y": 456, "confidence": "high"}\n\n'
+        "Rules:\n"
+        "- Click on the radio button/checkbox itself, not the text\n"
+        "- If the answer is a letter like 'B', find option B's radio/checkbox\n"
+        "- confidence is 'high', 'medium', or 'low'\n"
+        "- Return ONLY the JSON, no other text"
+    )
+
+    payload = {
+        "model": OPENAI_MODEL,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": screenshot_data, "detail": "high"},
+                    },
+                ],
+            }
+        ],
+        "max_tokens": 100,
+    }
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        resp = await client.post(
+            OPENAI_URL,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+            },
+            json=payload,
+        )
+
+    if resp.status_code != 200:
+        try:
+            detail = resp.json().get("error", {}).get("message", resp.text)
+        except Exception:
+            detail = resp.text
+        raise HTTPException(status_code=resp.status_code, detail=detail)
+
+    data = resp.json()
+    raw = data["choices"][0]["message"]["content"].strip()
+
+    # Parse the JSON response
+    import json
+
+    try:
+        # Strip markdown code fences if present
+        cleaned = raw
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            cleaned = cleaned.rsplit("```", 1)[0]
+        result = json.loads(cleaned)
+        return LocateResponse(
+            x=int(result["x"]),
+            y=int(result["y"]),
+            confidence=result.get("confidence", "medium"),
+        )
+    except (json.JSONDecodeError, KeyError, ValueError):
+        raise HTTPException(
+            status_code=422, detail=f"Could not parse coordinates from AI: {raw}"
+        )
 
 
 @app.get("/checkout")

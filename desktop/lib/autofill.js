@@ -1,31 +1,33 @@
 /**
  * Auto-fill module.
  *
- * Provides OS-level keyboard simulation to type answers into
+ * Provides OS-level keyboard and mouse simulation to fill answers into
  * whatever application/field currently has focus.
  *
- * Two modes:
- * 1. Clipboard (default): copies answer to clipboard — user pastes manually or
- *    we simulate Ctrl+V
+ * Modes:
+ * 1. Click: moves mouse to coordinates and clicks (for MC radio/checkbox)
  * 2. Type-out: types the answer character-by-character via simulated keystrokes
+ * 3. Clipboard: copies answer to clipboard as fallback
  */
 
 const { clipboard } = require("electron");
 
 let nutKeyboard = null;
+let nutMouse = null;
 
-async function getNutKeyboard() {
+async function getNut() {
   if (!nutKeyboard) {
     try {
-      const { keyboard } = require("@nut-tree-fork/nut-js");
-      keyboard.config.autoDelayMs = 20; // Fast but not instant
-      nutKeyboard = keyboard;
+      const nut = require("@nut-tree-fork/nut-js");
+      nut.keyboard.config.autoDelayMs = 20;
+      nutKeyboard = nut.keyboard;
+      nutMouse = nut.mouse;
     } catch (err) {
-      console.error("nut-js not available for typing simulation:", err.message);
-      return null;
+      console.error("nut-js not available:", err.message);
+      return { keyboard: null, mouse: null };
     }
   }
-  return nutKeyboard;
+  return { keyboard: nutKeyboard, mouse: nutMouse };
 }
 
 /**
@@ -40,9 +42,8 @@ function copyToClipboard(text) {
  * Falls back to clipboard copy if nut-js is not available.
  */
 async function typeAnswer(text) {
-  const kb = await getNutKeyboard();
+  const { keyboard: kb } = await getNut();
   if (!kb) {
-    // Fallback: just copy to clipboard
     copyToClipboard(text);
     return { method: "clipboard", success: true };
   }
@@ -51,7 +52,6 @@ async function typeAnswer(text) {
     await kb.type(text);
     return { method: "typed", success: true };
   } catch (err) {
-    // Fallback to clipboard on error
     copyToClipboard(text);
     return { method: "clipboard", success: true, fallback: true, error: err.message };
   }
@@ -61,7 +61,7 @@ async function typeAnswer(text) {
  * Simulate Ctrl+V (paste from clipboard) in the currently focused app.
  */
 async function simulatePaste() {
-  const kb = await getNutKeyboard();
+  const { keyboard: kb } = await getNut();
   if (!kb) return false;
 
   try {
@@ -77,4 +77,38 @@ async function simulatePaste() {
   }
 }
 
-module.exports = { copyToClipboard, typeAnswer, simulatePaste };
+/**
+ * Click at specific screen coordinates to select an MC option.
+ * Returns true on success, false on failure.
+ */
+async function clickAtPosition(x, y) {
+  const { mouse } = await getNut();
+  if (!mouse) return false;
+
+  try {
+    const { Point } = require("@nut-tree-fork/nut-js");
+    await mouse.setPosition(new Point(x, y));
+    await mouse.leftClick();
+    return true;
+  } catch (err) {
+    console.error("Mouse click failed:", err.message);
+    return false;
+  }
+}
+
+/**
+ * Detect whether an answer looks like a multiple-choice selection.
+ * MC answers are typically: "B", "A, C, E", "C. 2x + 2"
+ */
+function isMCAnswer(answer) {
+  const trimmed = answer.trim();
+  // Single letter
+  if (/^[A-E]$/i.test(trimmed)) return true;
+  // Letter with explanation: "B. something"
+  if (/^[A-E][.)]\s/i.test(trimmed)) return true;
+  // Multiple letters: "A, C, E" or "A,C,E"
+  if (/^[A-E](\s*,\s*[A-E])+$/i.test(trimmed)) return true;
+  return false;
+}
+
+module.exports = { copyToClipboard, typeAnswer, simulatePaste, clickAtPosition, isMCAnswer };
