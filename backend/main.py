@@ -133,78 +133,110 @@ async def locate_answer(req: LocateRequest):
     if not screenshot_data.startswith("data:"):
         screenshot_data = f"data:image/png;base64,{screenshot_data}"
 
-    prompt = (
-        f"The correct answer to the question in this screenshot is: {req.answer}\n\n"
-        f"The screenshot dimensions are {req.screenWidth}x{req.screenHeight} pixels.\n\n"
-        "Your task: Find the UI element (radio button, checkbox, or clickable option) "
-        "that corresponds to this answer.\n\n"
-        "Return ONLY a JSON object with the x,y pixel coordinates of where to click "
-        "to select this answer. The coordinates should be relative to the top-left "
-        "corner of the screenshot.\n\n"
-        'Format: {"x": 123, "y": 456, "confidence": "high"}\n\n'
-        "Rules:\n"
-        "- Click on the radio button/checkbox itself, not the text\n"
-        "- If the answer is a letter like 'B', find option B's radio/checkbox\n"
-        "- confidence is 'high', 'medium', or 'low'\n"
-        "- Return ONLY the JSON, no other text"
+    # Use computer vision to detect radio buttons (circles) in the screenshot
+    import base64
+    import numpy as np
+    import cv2
+
+    # Decode screenshot
+    img_data = screenshot_data
+    if img_data.startswith("data:"):
+        img_data = img_data.split(",", 1)[1]
+    img_bytes = base64.b64decode(img_data)
+    img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+    cv_img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+    gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+
+    # Detect circles (radio buttons are small circles, radius 5-15px)
+    circles = cv2.HoughCircles(
+        gray, cv2.HOUGH_GRADIENT, dp=1, minDist=20,
+        param1=50, param2=15, minRadius=5, maxRadius=15
     )
 
-    payload = {
-        "model": OPENAI_MODEL,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": screenshot_data, "detail": "high"},
-                    },
-                ],
-            }
-        ],
-        "max_tokens": 100,
-    }
+    x, y = None, None
+    confidence = "low"
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(
-            OPENAI_URL,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
-            },
-            json=payload,
-        )
+    if circles is not None:
+        all_circles = np.uint16(np.around(circles[0]))
 
-    if resp.status_code != 200:
-        try:
-            detail = resp.json().get("error", {}).get("message", resp.text)
-        except Exception:
-            detail = resp.text
-        raise HTTPException(status_code=resp.status_code, detail=detail)
+        # Find vertical groups of circles (same x ± 10px, consistent spacing)
+        x_groups = {}
+        for cx, cy, cr in all_circles:
+            bucket = int(cx) // 10 * 10
+            if bucket not in x_groups:
+                x_groups[bucket] = []
+            x_groups[bucket].append((int(cx), int(cy), int(cr)))
 
-    data = resp.json()
-    raw = data["choices"][0]["message"]["content"].strip()
+        # Merge adjacent x-buckets and find groups of 3+ circles
+        best_group = None
+        best_score = 0
+        sorted_buckets = sorted(x_groups.keys())
 
-    # Parse the JSON response
-    import json
+        for i, bucket in enumerate(sorted_buckets):
+            # Merge with adjacent buckets (within 5px to handle rounding)
+            merged = list(x_groups[bucket])
+            for j in range(i + 1, len(sorted_buckets)):
+                if sorted_buckets[j] - bucket <= 5:
+                    merged.extend(x_groups[sorted_buckets[j]])
+                else:
+                    break
 
-    try:
-        # Strip markdown code fences if present
-        cleaned = raw
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
-            cleaned = cleaned.rsplit("```", 1)[0]
-        result = json.loads(cleaned)
-        return LocateResponse(
-            x=int(result["x"]),
-            y=int(result["y"]),
-            confidence=result.get("confidence", "medium"),
-        )
-    except (json.JSONDecodeError, KeyError, ValueError):
+            if len(merged) < 3:
+                continue
+
+            # Sort by y and check for consistent spacing
+            merged.sort(key=lambda c: c[1])
+            # Check if circles have similar radius
+            radii = [c[2] for c in merged]
+            if max(radii) - min(radii) > 5:
+                continue
+
+            # Check consistent vertical spacing
+            spacings = [merged[k+1][1] - merged[k][1] for k in range(len(merged)-1)]
+            if not spacings:
+                continue
+            avg_spacing = sum(spacings) / len(spacings)
+            if avg_spacing < 20 or avg_spacing > 80:
+                continue
+            # All spacings should be within 30% of average
+            consistent = all(abs(s - avg_spacing) / avg_spacing < 0.3 for s in spacings)
+            if not consistent:
+                continue
+
+            # Score: more circles in group = better; consistent spacing = better
+            score = len(merged) * 10 - max(abs(s - avg_spacing) for s in spacings)
+            if score > best_score:
+                best_score = score
+                best_group = merged
+
+        if best_group:
+            # Extract target option index from answer letter
+            target_letter = req.answer.strip()[0].upper()
+            target_idx = ord(target_letter) - ord('A')
+
+            if 0 <= target_idx < len(best_group):
+                x = best_group[target_idx][0]
+                y = best_group[target_idx][1]
+                confidence = "high"
+            else:
+                x = best_group[0][0]
+                y = best_group[0][1]
+                confidence = "medium"
+
+    if x is None or y is None:
+        # Fallback: if circle detection fails, return error
+        print("[LOCATE CV] No radio button group detected, returning error")
         raise HTTPException(
-            status_code=422, detail=f"Could not parse coordinates from AI: {raw}"
+            status_code=422, detail="Could not detect radio buttons in screenshot"
         )
+
+    # Basic sanity check: coordinates must be within screen bounds
+    if x < 0 or x >= req.screenWidth or y < 0 or y >= req.screenHeight:
+        raise HTTPException(
+            status_code=422, detail=f"Coordinates out of bounds: ({x}, {y})"
+        )
+
+    return LocateResponse(x=x, y=y, confidence=confidence)
 
 
 @app.get("/checkout")

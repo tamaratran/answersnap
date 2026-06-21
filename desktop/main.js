@@ -125,12 +125,17 @@ async function captureAndAnswer() {
   let screenshotBase64 = null;
 
   try {
-    // Show overlay with loading state
+    // Hide overlay during capture to prevent it from appearing in screenshot
+    // (content protection only works on Windows/macOS, not Linux)
+    overlayWindow.hide();
+    await new Promise((r) => setTimeout(r, 100));
+
+    // Capture the screen
+    screenshotBase64 = await captureScreen();
+
+    // Now show overlay with loading state
     overlayWindow.show();
     overlayWindow.webContents.send("state", { type: "loading" });
-
-    // Capture the screen (overlay is automatically excluded due to content protection)
-    screenshotBase64 = await captureScreen();
 
     // Send to backend
     const answer = await queryBackend(screenshotBase64);
@@ -156,7 +161,7 @@ async function captureAndAnswer() {
 
 /**
  * Automatically fill the answer into the focused application.
- * - For MC answers: ask backend for click coordinates, then click
+ * - For MC answers: use CV-based radio button detection to click exact position
  * - For text answers: type into the focused field
  */
 async function autoFillAnswer(answer, screenshotBase64) {
@@ -175,11 +180,13 @@ async function autoFillAnswer(answer, screenshotBase64) {
       const { width, height } = primaryDisplay.size;
 
       const coords = await locateAnswer(screenshotBase64, cleanAnswer, width, height);
+      console.log(`[LOCATE] Screen: ${width}x${height}, Answer: "${cleanAnswer}", Coords:`, coords);
       if (coords && coords.x && coords.y) {
         // Hide overlay so it doesn't intercept the click
         overlayWindow.hide();
         await new Promise((r) => setTimeout(r, 150));
 
+        // Click the exact radio button position (detected by computer vision)
         const clicked = await clickAtPosition(coords.x, coords.y);
 
         // Show overlay again with result
