@@ -97,11 +97,22 @@ async function clickAtPosition(x, y) {
 }
 
 /**
+ * Strip surrounding quotes from AI response (GPT sometimes wraps in quotes).
+ */
+function stripQuotes(text) {
+  const t = text.trim();
+  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+    return t.slice(1, -1).trim();
+  }
+  return t;
+}
+
+/**
  * Detect whether an answer looks like a multiple-choice selection.
  * MC answers are typically: "B", "A, C, E", "C. 2x + 2"
  */
 function isMCAnswer(answer) {
-  const trimmed = answer.trim();
+  const trimmed = stripQuotes(answer);
   // Single letter
   if (/^[A-E]$/i.test(trimmed)) return true;
   // Letter with explanation: "B. something"
@@ -111,4 +122,4 @@ function isMCAnswer(answer) {
   return false;
 }
 
-module.exports = { copyToClipboard, typeAnswer, simulatePaste, clickAtPosition, isMCAnswer };
+module.exports = { copyToClipboard, typeAnswer, simulatePaste, clickAtPosition, isMCAnswer, stripQuotes };

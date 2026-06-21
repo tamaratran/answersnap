@@ -9,7 +9,7 @@ const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require("electro
 const path = require("path");
 const { captureScreen } = require("./lib/capture");
 const { queryBackend, locateAnswer } = require("./lib/backend");
-const { copyToClipboard, typeAnswer, clickAtPosition, isMCAnswer } = require("./lib/autofill");
+const { copyToClipboard, typeAnswer, clickAtPosition, isMCAnswer, stripQuotes } = require("./lib/autofill");
 
 // Prevent multiple instances
 const gotTheLock = app.requestSingleInstanceLock();
@@ -163,6 +163,7 @@ async function autoFillAnswer(answer, screenshotBase64) {
   try {
     if (isMCAnswer(answer)) {
       // Multiple choice — locate and click the correct option
+      const cleanAnswer = stripQuotes(answer);
       overlayWindow.webContents.send("state", {
         type: "answer",
         answer,
@@ -173,7 +174,7 @@ async function autoFillAnswer(answer, screenshotBase64) {
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width, height } = primaryDisplay.size;
 
-      const coords = await locateAnswer(screenshotBase64, answer, width, height);
+      const coords = await locateAnswer(screenshotBase64, cleanAnswer, width, height);
       if (coords && coords.x && coords.y) {
         // Hide overlay so it doesn't intercept the click
         overlayWindow.hide();
