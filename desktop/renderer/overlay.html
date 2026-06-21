@@ -30,6 +30,7 @@
         <p class="hint">Press <kbd>Ctrl+Shift+A</kbd> to answer</p>
         <div class="shortcuts">
           <div><kbd>Ctrl+Shift+A</kbd> — Get answer</div>
+          <div><kbd>Ctrl+Shift+T</kbd> — Type answer into field</div>
           <div><kbd>Ctrl+Shift+H</kbd> — Show/hide</div>
           <div><kbd>Ctrl+Shift+E</kbd> — Emergency hide</div>
           <div><kbd>Ctrl+Shift+Q</kbd> — Quit</div>
@@ -41,6 +42,10 @@
       </div>
       <div id="answer" class="state hidden">
         <div id="answer-text"></div>
+        <div id="answer-footer">
+          <span id="clipboard-status"></span>
+          <span class="type-hint">Press <kbd>Ctrl+Shift+T</kbd> to type into field</span>
+        </div>
       </div>
       <div id="error" class="state hidden">
         <p id="error-text" class="error-msg"></p>

@@ -10,6 +10,7 @@ const answerEl = document.getElementById("answer");
 const answerTextEl = document.getElementById("answer-text");
 const errorEl = document.getElementById("error");
 const errorTextEl = document.getElementById("error-text");
+const clipboardStatus = document.getElementById("clipboard-status");
 const copyBtn = document.getElementById("copy-btn");
 const closeBtn = document.getElementById("close-btn");
 
@@ -43,7 +44,14 @@ window.cheatly.onState((data) => {
       break;
     case "answer":
       answerTextEl.textContent = data.answer;
+      if (data.copied) {
+        clipboardStatus.textContent = "Copied to clipboard";
+      }
       showState("answer");
+      break;
+    case "typed":
+      clipboardStatus.textContent =
+        data.method === "typed" ? "Typed into field" : "Copied to clipboard (paste with Ctrl+V)";
       break;
     case "error":
       errorTextEl.textContent = data.message;

@@ -16,9 +16,18 @@ Uses an invisible overlay window that is excluded from all screen capture, recor
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+Shift+A` | Capture screen + get answer |
+| `Ctrl+Shift+T` | Type answer into focused field (auto-fill) |
 | `Ctrl+Shift+H` | Show/hide overlay |
 | `Ctrl+Shift+E` | Emergency hide (instant) |
 | `Ctrl+Shift+Q` | Quit |
+
+## Auto-Fill
+
+When you get an answer:
+1. It's automatically **copied to clipboard** (just Ctrl+V to paste)
+2. Press **Ctrl+Shift+T** to **type it directly** into whatever text field is focused (simulates keystrokes)
+
+For multiple choice questions, read the answer from the overlay and click the option yourself.
 
 ## Development
 

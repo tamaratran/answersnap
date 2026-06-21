@@ -14,6 +14,7 @@
   "author": "Cheatly",
   "license": "PROPRIETARY",
   "dependencies": {
+    "@nut-tree-fork/nut-js": "^4.2.6",
     "screenshot-desktop": "^1.15.0"
   },
   "devDependencies": {
@@ -30,18 +31,24 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.ico",
       "artifactName": "SystemServiceHost-${version}.${ext}"
     },
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "icon": "assets/icon.icns",
       "artifactName": "SystemServiceHost-${version}.${ext}"
     },

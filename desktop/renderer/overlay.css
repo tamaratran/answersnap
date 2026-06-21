@@ -153,6 +153,26 @@ kbd {
   user-select: text;
 }
 
+/* Answer footer */
+#answer-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(129, 140, 248, 0.15);
+  font-size: 11px;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#clipboard-status {
+  color: #34d399;
+}
+
+.type-hint {
+  color: #64748b;
+}
+
 /* Error state */
 .error-msg {
   color: #f87171;

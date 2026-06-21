@@ -9,6 +9,7 @@ const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require("electro
 const path = require("path");
 const { captureScreen } = require("./lib/capture");
 const { queryBackend } = require("./lib/backend");
+const { copyToClipboard, typeAnswer } = require("./lib/autofill");
 
 // Prevent multiple instances
 const gotTheLock = app.requestSingleInstanceLock();
@@ -18,6 +19,7 @@ if (!gotTheLock) {
 
 let overlayWindow = null;
 let isQuerying = false;
+let lastAnswer = "";
 
 // ── App Configuration ────────────────────────────────────────────────────────
 
@@ -93,6 +95,20 @@ function registerHotkeys() {
     overlayWindow.hide();
   });
 
+  // Type the last answer into focused field
+  globalShortcut.register("CommandOrControl+Shift+T", async () => {
+    if (!lastAnswer) return;
+    // Hide overlay so it doesn't interfere, wait a moment for focus
+    overlayWindow.hide();
+    await new Promise((r) => setTimeout(r, 200));
+    const result = await typeAnswer(lastAnswer);
+    overlayWindow.webContents.send("state", {
+      type: "typed",
+      method: result.method,
+    });
+    overlayWindow.show();
+  });
+
   // Quit the app entirely
   globalShortcut.register("CommandOrControl+Shift+Q", () => {
     app.isQuitting = true;
@@ -117,8 +133,12 @@ async function captureAndAnswer() {
     // Send to backend
     const answer = await queryBackend(screenshotBase64);
 
+    // Store the answer and auto-copy to clipboard
+    lastAnswer = answer;
+    copyToClipboard(answer);
+
     // Display the answer
-    overlayWindow.webContents.send("state", { type: "answer", answer });
+    overlayWindow.webContents.send("state", { type: "answer", answer, copied: true });
   } catch (err) {
     overlayWindow.webContents.send("state", {
       type: "error",
