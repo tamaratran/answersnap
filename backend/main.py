@@ -251,6 +251,7 @@ async def create_checkout():
         "success_url": f"{LANDING_URL}/download.html",
         "cancel_url": f"{LANDING_URL}/?checkout=cancelled",
         "allow_promotion_codes": "true",
+        "subscription_data[trial_period_days]": "7",
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
