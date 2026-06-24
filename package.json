@@ -1,5 +1,5 @@
 {
-  "name": "answersnap",
+  "name": "cheatly",
   "version": "1.0.0",
   "description": "AI-powered Chrome extension for instant answers. Double-click any question to get the answer.",
   "private": true,

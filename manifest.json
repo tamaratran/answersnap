@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "AnswerSnap — AI Answer Any Question",
+  "name": "Cheatly — AI Answer Any Question",
   "version": "1.0.0",
-  "description": "Double-click any question on screen to get instant AI-powered answers. Supports multiple choice, fill-in-the-blank, matching, short answer, and essay questions.",
+  "description": "Double-click any question for instant AI answers. Auto-clicks multiple choice, fills blanks, and types short answers.",
   "minimum_chrome_version": "116",
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "alarms"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -48,7 +49,7 @@
       "suggested_key": {
         "default": "Alt+A"
       },
-      "description": "Toggle AnswerSnap on/off"
+      "description": "Toggle Cheatly on/off"
     }
   },
   "offline_enabled": false

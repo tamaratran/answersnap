@@ -1,5 +1,5 @@
 /**
- * AnswerSnap — Background Service Worker
+ * Cheatly — Background Service Worker
  *
  * Handles:
  * 1. Screenshot capture via chrome.tabs.captureVisibleTab
@@ -7,11 +7,14 @@
  * 3. Message routing between content script and popup
  */
 
+const BACKEND_URL = "https://answersnap-backend.fly.dev";
+
+const AUTO_DISABLE_ALARM = "auto-disable";
+const AUTO_DISABLE_MINUTES = 120; // 2 hours
+
 const DEFAULT_SETTINGS = {
   enabled: true,
   displayMode: "homework", // "invisible" | "sneaky" | "homework"
-  apiKey: "",
-  model: "gpt-4o",
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -26,97 +29,78 @@ async function captureScreenshot() {
   if (!tab?.id) throw new Error("No active tab found");
 
   const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-    format: "png",
-    quality: 90,
+    format: "jpeg",
+    quality: 80,
   });
   return dataUrl;
 }
 
-function buildPrompt(selectedText) {
-  const contextHint = selectedText
-    ? `The user double-clicked near this text: "${selectedText}"\n\n`
-    : "";
-
-  return `${contextHint}You are an expert tutor. Look at this screenshot of a question (exam, quiz, homework, etc.).
-
-Your job:
-1. Identify the SINGLE question closest to where the user double-clicked.
-2. Determine the correct answer for ONLY that one question.
-3. Return ONLY the answer in a concise format.
-
-Rules:
-- For multiple choice: return the letter and brief text, e.g. "C. 2x + 2"
-- For multiple select: return all correct letters, e.g. "A, C"
-- For fill-in-the-blank: return just the answer value
-- For short answer / essay: provide a concise but complete answer
-- Answer ONLY ONE question — the one nearest to the user's click.
-- Be direct. No preamble or explanation unless the question asks for it.
-- If you cannot determine the answer with confidence, say "Uncertain: " followed by your best guess.`;
-}
-
-async function queryAI(screenshotDataUrl, selectedText, settings) {
-  if (!settings.apiKey) {
-    throw new Error("API key not set. Open the AnswerSnap popup to configure.");
-  }
-
-  const base64Image = screenshotDataUrl.split(",")[1];
-
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+async function queryBackend(screenshotDataUrl, selectedText) {
+  const response = await fetch(`${BACKEND_URL}/answer`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${settings.apiKey}`,
     },
     body: JSON.stringify({
-      model: settings.model,
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: buildPrompt(selectedText),
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/png;base64,${base64Image}`,
-                detail: "high",
-              },
-            },
-          ],
-        },
-      ],
+      screenshot: screenshotDataUrl,
+      selectedText: selectedText || "",
     }),
   });
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new Error(
-      `OpenAI API error: ${response.status} — ${err.error?.message || response.statusText}`
+      err.detail || `Backend error: ${response.status} — ${response.statusText}`
     );
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content?.trim() || "No answer returned.";
+  return data.answer || "No answer returned.";
 }
 
-// ── Message Handler ─────────────────────────────────────────────────────────
+// ── Port Handler (content script) ────────────────────────────────────────────
+// Content script uses chrome.runtime.connect() which reliably wakes the
+// service worker even after it goes inactive in MV3.
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== "answersnap") return;
+
+  port.onMessage.addListener((message) => {
+    handlePortMessage(message, port);
+  });
+});
+
+async function handlePortMessage(message, port) {
+  try {
+    if (message.type === "CAPTURE_SCREENSHOT") {
+      const result = await captureScreenshot().catch((err) => ({ error: err.message }));
+      port.postMessage(result);
+    } else if (message.type === "ANSWER_REQUEST") {
+      const settings = await getSettings();
+      if (!settings.enabled) {
+        port.postMessage({ error: "Cheatly is disabled." });
+        return;
+      }
+      // Capture screenshot here so it never round-trips through the content script
+      const screenshot = await captureScreenshot();
+      const answer = await queryBackend(screenshot, message.selectedText);
+
+      port.postMessage({ answer, displayMode: settings.displayMode });
+    } else if (message.type === "GET_SETTINGS") {
+      const settings = await getSettings();
+      port.postMessage(settings);
+    } else if (message.type === "SAVE_SETTINGS") {
+      await chrome.storage.local.set({ settings: message.settings });
+      port.postMessage({ ok: true });
+    }
+  } catch (err) {
+    port.postMessage({ error: err.message });
+  }
+}
+
+// ── Message Handler (popup) ─────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === "CAPTURE_SCREENSHOT") {
-    captureScreenshot().then(sendResponse).catch((err) => {
-      sendResponse({ error: err.message });
-    });
-    return true;
-  }
-
-  if (message.type === "ANSWER_REQUEST") {
-    handleAnswerRequest(message, sendResponse);
-    return true;
-  }
-
   if (message.type === "GET_SETTINGS") {
     getSettings().then(sendResponse);
     return true;
@@ -124,29 +108,59 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "SAVE_SETTINGS") {
     chrome.storage.local.set({ settings: message.settings }).then(() => {
+      // Manage auto-disable timer on settings change from popup
+      if (message.settings.enabled) {
+        startAutoDisableTimer();
+      } else {
+        clearAutoDisableTimer();
+      }
       sendResponse({ ok: true });
     });
     return true;
   }
 });
 
-async function handleAnswerRequest(message, sendResponse) {
-  try {
-    const settings = await getSettings();
+// ── Auto-Disable Timer ──────────────────────────────────────────────────────
 
-    if (!settings.enabled) {
-      sendResponse({ error: "AnswerSnap is disabled." });
-      return;
-    }
-
-    const screenshot = message.screenshot || await captureScreenshot();
-    const answer = await queryAI(screenshot, message.selectedText, settings);
-
-    sendResponse({ answer, displayMode: settings.displayMode });
-  } catch (err) {
-    sendResponse({ error: err.message });
-  }
+function startAutoDisableTimer() {
+  chrome.alarms.create(AUTO_DISABLE_ALARM, {
+    delayInMinutes: AUTO_DISABLE_MINUTES,
+  });
 }
+
+function clearAutoDisableTimer() {
+  chrome.alarms.clear(AUTO_DISABLE_ALARM);
+}
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== AUTO_DISABLE_ALARM) return;
+
+  const settings = await getSettings();
+  if (!settings.enabled) return; // Already off
+
+  settings.enabled = false;
+  await chrome.storage.local.set({ settings });
+
+  // Notify active tab so toast shows
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id) {
+    chrome.tabs.sendMessage(tab.id, {
+      type: "TOGGLE_STATE",
+      enabled: false,
+    }).catch(() => {});
+  }
+});
+
+// Start timer on install/startup if enabled
+chrome.runtime.onInstalled.addListener(async () => {
+  const settings = await getSettings();
+  if (settings.enabled) startAutoDisableTimer();
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  const settings = await getSettings();
+  if (settings.enabled) startAutoDisableTimer();
+});
 
 // ── Keyboard Shortcut ───────────────────────────────────────────────────────
 
@@ -155,6 +169,13 @@ chrome.commands.onCommand.addListener(async (command) => {
     const settings = await getSettings();
     settings.enabled = !settings.enabled;
     await chrome.storage.local.set({ settings });
+
+    // Manage auto-disable timer
+    if (settings.enabled) {
+      startAutoDisableTimer();
+    } else {
+      clearAutoDisableTimer();
+    }
 
     const [tab] = await chrome.tabs.query({
       active: true,

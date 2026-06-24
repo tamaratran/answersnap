@@ -1,5 +1,5 @@
 /**
- * AnswerSnap — Content Script
+ * Cheatly — Content Script
  *
  * Injected into every page. Listens for double-click events,
  * communicates with the background service worker, and renders
@@ -23,7 +23,7 @@
     overlay.className = "answersnap-overlay answersnap-hidden";
     overlay.innerHTML = `
       <div class="answersnap-header">
-        <span class="answersnap-title">AnswerSnap</span>
+        <span class="answersnap-title">Cheatly</span>
         <div class="answersnap-actions">
           <button class="answersnap-copy" title="Copy answer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -59,53 +59,17 @@
     return overlay;
   }
 
-  function showLoading(mode) {
-    if (mode === "invisible") return;
-
-    const overlay = createOverlay();
-    const answerEl = overlay.querySelector(".answersnap-answer");
-    answerEl.innerHTML = `
-      <div class="answersnap-loading">
-        <div class="answersnap-spinner"></div>
-        <span>Analyzing...</span>
-      </div>
-    `;
-
-    overlay.classList.remove("answersnap-hidden");
-
-    if (mode === "sneaky") {
-      overlay.classList.add("answersnap-sneaky");
-    } else {
-      overlay.classList.remove("answersnap-sneaky");
-    }
+  function showLoading(_mode) {
+    // Silent — no UI feedback while loading
   }
 
-  function showAnswer(answer, mode, clickTarget) {
-    // Auto-fill the answer on the page for the clicked question
+  function showAnswer(answer, _mode, clickTarget) {
+    // Auto-fill the answer on the page silently
     autoFillAnswers(answer, clickTarget);
-
-    if (mode === "invisible") {
-      navigator.clipboard.writeText(answer).catch(() => {});
-      showToast("Answer copied to clipboard");
-      return;
-    }
-
-    const overlay = createOverlay();
-    const answerEl = overlay.querySelector(".answersnap-answer");
-    answerEl.textContent = answer;
-
-    overlay.classList.remove("answersnap-hidden", "answersnap-sneaky");
-
-    if (mode === "sneaky") {
-      overlay.classList.add("answersnap-sneaky");
-    }
   }
 
   function showError(message) {
-    const overlay = createOverlay();
-    const answerEl = overlay.querySelector(".answersnap-answer");
-    answerEl.innerHTML = `<span class="answersnap-error">${escapeHtml(message)}</span>`;
-    overlay.classList.remove("answersnap-hidden", "answersnap-sneaky");
+    showToast(message);
   }
 
   function hideOverlay() {
@@ -143,17 +107,50 @@
     const parsed = parseAnswerLines(answerText);
     if (parsed.length === 0) return;
 
-    const entry = parsed[0];
     const groups = collectOptionGroups();
+
+    // Check if this is a multi-select answer (multiple entries with letters)
+    if (parsed.length > 1 && parsed.every((e) => e.letter && e.questionNum === null)) {
+      // Multi-select: only select within the single nearest group to avoid
+      // cross-question pollution when AI returns answers for multiple questions
+      const nearest = findNearestGroup(groups, clickTarget);
+
+      if (nearest) {
+        for (const entry of parsed) {
+          const match = entry.letter
+            ? (matchOptionByLetter(nearest.options, entry.letter) ||
+               matchOptionByText(nearest.options, entry.text) ||
+               matchOptionByPosition(nearest.options, entry.letter))
+            : null;
+
+          if (match) {
+            clickElement(match.element);
+            highlightElement(match.element);
+          }
+        }
+      }
+      return;
+    }
+
+    const entry = parsed[0];
 
     if (entry.letter) {
       const el = selectChoice(groups, entry, clickTarget);
       if (el) highlightElement(el);
     } else if (entry.value) {
-      const input = findNearestTextInput(clickTarget);
-      if (input) {
-        fillTextInput(input, entry.value);
-        highlightElement(input);
+      // First try to match the value against the nearest option group's text
+      // (handles cases like AI returning "11" for a radio option labeled "11")
+      const nearest = findNearestGroup(groups, clickTarget);
+      const textMatch = nearest ? matchOptionByText(nearest.options, entry.value) : null;
+      if (textMatch) {
+        clickElement(textMatch.element);
+        highlightElement(textMatch.element);
+      } else {
+        const input = findNearestTextInput(clickTarget);
+        if (input) {
+          fillTextInput(input, entry.value);
+          highlightElement(input);
+        }
       }
     }
   }
@@ -189,10 +186,10 @@
   }
 
   function highlightElement(el) {
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.scrollIntoView({ behavior: "instant", block: "nearest" });
     const target = el.closest("label") || el.closest("div") || el;
     const prev = target.style.cssText;
-    target.style.transition = "background-color 0.4s ease, outline 0.2s ease";
+    target.style.transition = "background-color 0.3s ease, outline 0.15s ease";
     target.style.backgroundColor = "rgba(66, 133, 244, 0.35)";
     target.style.outline = "2px solid rgba(66, 133, 244, 0.7)";
     target.style.outlineOffset = "2px";
@@ -201,8 +198,8 @@
       target.style.backgroundColor = "";
       target.style.outline = "";
       target.style.outlineOffset = "";
-      setTimeout(() => { target.style.cssText = prev; }, 400);
-    }, 1000);
+      setTimeout(() => { target.style.cssText = prev; }, 300);
+    }, 600);
   }
 
   function parseAnswerLines(answerText) {
@@ -211,6 +208,16 @@
 
     for (const line of lines) {
       const trimmed = line.trim();
+
+      // Check for comma-separated multi-select: "A, C" or "A, C, D"
+      const multiMatch = trimmed.match(/^([A-Za-z])(?:\s*,\s*[A-Za-z])+$/);
+      if (multiMatch) {
+        const letters = trimmed.split(/\s*,\s*/);
+        for (const l of letters) {
+          results.push({ questionNum: null, letter: l.trim().toUpperCase(), text: null, value: null });
+        }
+        continue;
+      }
 
       // Match numbered answer: "1. C. Mitochondria" or "5. 6"
       const numberedMatch = trimmed.match(/^(\d+)\.\s*(.+)/);
@@ -271,11 +278,53 @@
       const items = [...rg.querySelectorAll('[role="radio"], [data-value]')];
       if (!items.length) return;
       const options = items.map((el) => {
-        const text = el.textContent?.trim() || el.getAttribute("data-value") || "";
-        return { element: el, label: el, text };
+        const label = el.closest("label");
+        const text = el.textContent?.trim() || el.getAttribute("data-value") || el.getAttribute("aria-label") || label?.textContent?.trim() || "";
+        return { element: el, label: label || el, text };
       });
       groups.push({ type: "gforms-radio", options });
     });
+
+    // Google Forms: collect checkbox groups from div[role="checkbox"] elements
+    // Group checkboxes by their nearest common container that doesn't also contain radios
+    const allCheckboxes = [...document.querySelectorAll('[role="checkbox"]')].filter(
+      (el) => !el.closest("#answersnap-overlay")
+    );
+    if (allCheckboxes.length) {
+      // Find the tightest container for each checkbox group
+      const seen = new Set();
+      allCheckboxes.forEach((cb) => {
+        if (seen.has(cb)) return;
+        // Walk up to find a container holding multiple checkboxes but no radios.
+        // On Google Forms each checkbox is inside its own <label>, so we must
+        // keep walking past single-checkbox wrappers to reach the real group.
+        let container = cb.parentElement;
+        let bestContainer = null;
+        while (container && container !== document.body) {
+          const cbs = container.querySelectorAll('[role="checkbox"]');
+          const radios = container.querySelectorAll('[role="radio"]');
+          if (radios.length > 0) break;
+          if (cbs.length > 0) {
+            bestContainer = container;
+            if (cbs.length > 1) break;
+          }
+          container = container.parentElement;
+        }
+        container = bestContainer || cb.parentElement;
+        const items = [...container.querySelectorAll('[role="checkbox"]')];
+        const key = items.map((el) => el.getAttribute("aria-label")).join(",");
+        if (!seen.has(key)) {
+          seen.add(key);
+          items.forEach((el) => seen.add(el));
+          const options = items.map((el) => {
+            const label = el.closest("label");
+            const text = el.getAttribute("aria-label") || el.textContent?.trim() || el.getAttribute("data-value") || label?.textContent?.trim() || "";
+            return { element: el, label: label || el, text };
+          });
+          groups.push({ type: "gforms-checkbox", options });
+        }
+      });
+    }
 
     // Google Forms: div[role="listbox"] with div[role="option"]
     document.querySelectorAll('[role="listbox"]').forEach((lb) => {
@@ -337,6 +386,12 @@
     return null;
   }
 
+  function matchOptionByPosition(options, letter) {
+    const idx = letter.charCodeAt(0) - "A".charCodeAt(0);
+    if (idx >= 0 && idx < options.length) return options[idx];
+    return null;
+  }
+
   function matchOptionByText(options, text) {
     if (!text) return null;
     const lower = text.toLowerCase();
@@ -344,22 +399,68 @@
     for (const opt of options) {
       if (opt.text.toLowerCase().includes(lower)) return opt;
     }
-    return null;
+    // Reverse: check if option text is a substring of the answer
+    for (const opt of options) {
+      if (opt.text && lower.includes(opt.text.toLowerCase())) return opt;
+    }
+    // Fuzzy: normalize whitespace/special chars and compare
+    const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const normText = normalize(text);
+    let bestMatch = null;
+    let bestScore = 0;
+    for (const opt of options) {
+      if (!opt.text) continue;
+      const normOpt = normalize(opt.text);
+      if (!normOpt) continue;
+      // Check if one contains the other after normalization
+      if (normOpt.includes(normText) || normText.includes(normOpt)) return opt;
+      // Token overlap score
+      const tWords = new Set(text.toLowerCase().split(/\s+/));
+      const oWords = opt.text.toLowerCase().split(/\s+/);
+      const overlap = oWords.filter((w) => tWords.has(w)).length;
+      const score = overlap / Math.max(tWords.size, oWords.length);
+      if (score > bestScore && score > 0.5) {
+        bestScore = score;
+        bestMatch = opt;
+      }
+    }
+    return bestMatch;
   }
 
   function clickElement(el) {
-    if (el.tagName === "INPUT" && (el.type === "radio" || el.type === "checkbox")) {
+    if (el.tagName === "INPUT" && el.type === "radio") {
       el.checked = true;
       el.dispatchEvent(new Event("change", { bubbles: true }));
       el.dispatchEvent(new Event("input", { bubbles: true }));
       el.click();
+    } else if (el.tagName === "INPUT" && el.type === "checkbox") {
+      // For checkboxes, only click if not already checked (click toggles state)
+      if (!el.checked) {
+        el.click();
+      }
     } else {
-      // Google Forms custom elements
+      // Google Forms custom elements – skip if already checked
+      if (el.getAttribute("aria-checked") === "true") return;
       el.click();
-      el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-      el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-      el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     }
+  }
+
+  function findNearestGroup(groups, clickTarget) {
+    if (!clickTarget || !groups.length) return groups[0] || null;
+    const clickRect = clickTarget.getBoundingClientRect();
+    let best = null;
+    let bestDist = Infinity;
+    for (const group of groups) {
+      const el = group.options[0]?.element;
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      const dist = Math.abs(rect.top - clickRect.top);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = group;
+      }
+    }
+    return best;
   }
 
   function selectChoice(groups, entry, clickTarget) {
@@ -411,6 +512,17 @@
       }
     }
 
+    // Priority 4: positional fallback (A=1st, B=2nd) on nearest group
+    if (entry.letter) {
+      for (const group of sorted) {
+        const match = matchOptionByPosition(group.options, entry.letter);
+        if (match) {
+          clickElement(match.element);
+          return match.element;
+        }
+      }
+    }
+
     return null;
   }
 
@@ -448,30 +560,12 @@
 
     isLoading = true;
 
-    // Capture screenshot BEFORE showing the loading overlay so it doesn't
-    // appear in the image sent to the AI.
-    let screenshot;
-    try {
-      screenshot = await sendMessage({ type: "CAPTURE_SCREENSHOT" });
-    } catch {
-      showError("Failed to capture screenshot.");
-      isLoading = false;
-      return;
-    }
-
-    // Now show the loading indicator
-    try {
-      const settings = await sendMessage({ type: "GET_SETTINGS" });
-      showLoading(settings.displayMode);
-    } catch {
-      showLoading("homework");
-    }
-
+    // Single message: background captures the screenshot and queries the
+    // backend in one hop, avoiding a redundant screenshot round-trip.
     try {
       const response = await sendMessage({
         type: "ANSWER_REQUEST",
         selectedText,
-        screenshot,
       });
 
       if (response.error) {
@@ -490,13 +584,21 @@
 
   function sendMessage(msg) {
     return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(msg, (response) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
+      try {
+        const port = chrome.runtime.connect({ name: "answersnap" });
+        port.onMessage.addListener((response) => {
+          port.disconnect();
           resolve(response);
-        }
-      });
+        });
+        port.onDisconnect.addListener(() => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          }
+        });
+        port.postMessage(msg);
+      } catch (err) {
+        reject(new Error(err.message || "Could not connect to service worker"));
+      }
     });
   }
 
@@ -505,7 +607,7 @@
     if (message.type === "TOGGLE_STATE") {
       enabled = message.enabled;
       if (!enabled) hideOverlay();
-      showToast(enabled ? "AnswerSnap ON" : "AnswerSnap OFF");
+      showToast(enabled ? "Cheatly ON" : "Cheatly OFF");
     }
   });
 

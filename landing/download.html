@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Download Cheatly — Install Your Extension</title>
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="icon16.png" sizes="16x16" type="image/png" />
+  <link rel="icon" href="icon48.png" sizes="48x48" type="image/png" />
+  <link rel="icon" href="icon128.png" sizes="128x128" type="image/png" />
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="/" class="nav-logo">
+        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <span>Cheatly</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Success / Download Section -->
+  <section class="download-hero">
+    <div class="container">
+      <div class="download-card">
+        <div class="download-badge">You're In</div>
+        <h1>Install Cheatly</h1>
+        <p class="download-subtitle">Download the extension and follow the 3 steps below to get started.</p>
+
+        <a href="cheatly-extension.zip" download class="btn btn-primary btn-large download-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Cheatly Extension
+        </a>
+        <p class="download-file-info">cheatly-extension.zip &middot; ~25 KB</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Installation Steps -->
+  <section class="install-steps">
+    <div class="container">
+      <h2>How to Install</h2>
+      <p class="section-subtitle">Takes less than 60 seconds</p>
+
+      <div class="install-grid">
+        <div class="install-step">
+          <div class="install-step-number">1</div>
+          <h3>Unzip the File</h3>
+          <p>After downloading, <strong>extract</strong> the ZIP file to a folder on your computer. Remember where you saved it.</p>
+          <div class="install-tip">
+            <strong>Windows:</strong> Right-click &rarr; Extract All<br/>
+            <strong>Mac:</strong> Double-click the ZIP
+          </div>
+        </div>
+
+        <div class="install-step">
+          <div class="install-step-number">2</div>
+          <h3>Open Chrome Extensions</h3>
+          <p>Open Chrome and go to the extensions page. Enable <strong>Developer mode</strong> in the top-right corner.</p>
+          <div class="install-url-box">
+            <code>chrome://extensions</code>
+            <button class="copy-btn" onclick="navigator.clipboard.writeText('chrome://extensions');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button>
+          </div>
+          <div class="install-tip">
+            Toggle the <strong>"Developer mode"</strong> switch in the top-right corner of the page.
+          </div>
+        </div>
+
+        <div class="install-step">
+          <div class="install-step-number">3</div>
+          <h3>Load Unpacked</h3>
+          <p>Click <strong>"Load unpacked"</strong> in the top-left, then select the folder you extracted in Step 1.</p>
+          <div class="install-tip">
+            You should see the Cheatly icon appear in your Chrome toolbar. You're all set!
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Start -->
+  <section class="quick-start">
+    <div class="container">
+      <div class="quick-start-card">
+        <h2>Start Using Cheatly</h2>
+        <p class="section-subtitle">Two ways to get instant answers</p>
+        <div class="usage-grid">
+          <div class="usage-item">
+            <div class="usage-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/></svg>
+            </div>
+            <h3>Double-Click</h3>
+            <p>Double-click any question text on the page. The answer appears instantly.</p>
+          </div>
+          <div class="usage-item">
+            <div class="usage-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01"/></svg>
+            </div>
+            <h3>Alt + A</h3>
+            <p>Toggle the extension on/off at any time. When on, every double-click triggers an answer.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2025 Cheatly. Built with AI.</p>
+    </div>
+  </footer>
+  <script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# AnswerSnap
+# Cheatly
 
 AI-powered Chrome extension that gives you instant answers on any question. Double-click any question on your screen to get the answer.
 
@@ -29,7 +29,7 @@ git clone https://github.com/tamaratran/answersnap.git
 
 ### 2. Configure
 
-1. Click the AnswerSnap extension icon in your toolbar
+1. Click the Cheatly extension icon in your toolbar
 2. Enter your [OpenAI API key](https://platform.openai.com/api-keys)
 3. Choose your display mode
 4. Toggle the extension on
@@ -91,13 +91,13 @@ Cost is typically a few cents per question (GPT-4o vision pricing).
 
 ```bash
 npm run pack:zip
-# Creates dist/answersnap-<version>.zip
+# Creates dist/cheatly-<version>.zip
 ```
 
 ### Submit to Chrome Web Store
 
 1. Go to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
-2. Click **New Item** → upload `dist/answersnap-<version>.zip`
+2. Click **New Item** → upload `dist/cheatly-<version>.zip`
 3. Fill in the listing fields using the copy in [`store/LISTING.md`](store/LISTING.md)
 4. **Privacy Policy URL** — host `privacy-policy.html` (e.g. via GitHub Pages) and paste the URL
 5. Upload 1-5 screenshots (1280×800 or 640×400)

@@ -3,26 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AnswerSnap — AI-Powered Instant Answers</title>
+  <title>Cheatly — Instant AI Answers On Any Question</title>
+  <meta name="description" content="Double-click any question on your screen and get the answer instantly. Works on Canvas, Blackboard, Google Forms, and any website. AI-powered Chrome extension." />
+  <meta name="theme-color" content="#0a0a14" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cheatly" />
+  <meta property="og:title" content="Cheatly — Instant AI Answers On Any Question" />
+  <meta property="og:description" content="Double-click any question on your screen and get the answer instantly. Works on Canvas, Blackboard, Google Forms, and any website." />
+  <meta property="og:url" content="https://cheatly.xyz/" />
+  <meta property="og:image" content="https://cheatly.xyz/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Cheatly — Instant AI Answers On Any Question" />
+  <meta name="twitter:description" content="Double-click any question on your screen and get the answer instantly. Works on any website." />
+  <meta name="twitter:image" content="https://cheatly.xyz/og-image.png" />
+
   <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="../icons/icon48.png" type="image/png" />
+  <link rel="icon" href="icon16.png" sizes="16x16" type="image/png" />
+  <link rel="icon" href="icon48.png" sizes="48x48" type="image/png" />
+  <link rel="icon" href="icon128.png" sizes="128x128" type="image/png" />
+  <link rel="apple-touch-icon" href="icon128.png" />
 </head>
 <body>
   <!-- Nav -->
   <nav class="nav">
     <div class="container nav-inner">
       <a href="#" class="nav-logo">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        <span>AnswerSnap</span>
+        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <span>Cheatly</span>
       </a>
       <div class="nav-links">
         <a href="#features">Features</a>
         <a href="#demo">Demo</a>
         <a href="#how-it-works">How It Works</a>
+        <a href="#pricing">Pricing</a>
         <a href="#faq">FAQ</a>
       </div>
     </div>
@@ -38,15 +57,84 @@
         Works on any website, any platform.
       </p>
       <div class="hero-actions">
-        <a href="#how-it-works" class="btn btn-primary">Get Started</a>
+        <a href="https://answersnap-backend.fly.dev/checkout" class="btn btn-primary">Start Free Trial</a>
         <a href="#demo" class="btn btn-secondary">See Demo</a>
       </div>
-      <div class="hero-trust">
-        <span>Works On:</span>
-        <span class="trust-item">Canvas</span>
-        <span class="trust-item">Blackboard</span>
-        <span class="trust-item">Google Forms</span>
-        <span class="trust-item">Any Website</span>
+      <div class="trust-bar">
+        <span>&#10003; Cancel Anytime</span>
+        <span>&#10003; Satisfaction Guaranteed</span>
+        <span>&#10003; No Setup Required</span>
+      </div>
+      <p class="marquee-label">Works on every platform</p>
+      <div class="logo-marquee">
+        <div class="marquee-track">
+          <!-- First set -->
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><circle cx="12" cy="12" r="11" stroke="currentColor" stroke-width="2"/><path d="M8 8h8v8H8z" fill="currentColor" opacity="0.3"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor">C</text></svg>
+            <span>Canvas</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><rect x="3" y="2" width="18" height="20" rx="2" stroke="currentColor" stroke-width="2"/><path d="M7 7h10M7 11h10M7 15h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>Blackboard</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 9h18M9 9v12" stroke="currentColor" stroke-width="2"/><circle cx="15" cy="15" r="2" fill="currentColor"/></svg>
+            <span>Google Forms</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M9 8l6 4-6 4V8z" fill="currentColor"/></svg>
+            <span>Quizlet</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><path d="M4 19V9l8-5 8 5v10" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 19v-6h6v6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            <span>Moodle</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            <span>Coursera</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <span>edX</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="currentColor" stroke-width="2"/><path d="M2 12h20M12 2c2.5 3 4 6.5 4 10s-1.5 7-4 10c-2.5-3-4-6.5-4-10s1.5-7 4-10z" stroke="currentColor" stroke-width="2"/></svg>
+            <span>Any Website</span>
+          </div>
+          <!-- Duplicate set for seamless loop -->
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><circle cx="12" cy="12" r="11" stroke="currentColor" stroke-width="2"/><path d="M8 8h8v8H8z" fill="currentColor" opacity="0.3"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor">C</text></svg>
+            <span>Canvas</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><rect x="3" y="2" width="18" height="20" rx="2" stroke="currentColor" stroke-width="2"/><path d="M7 7h10M7 11h10M7 15h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>Blackboard</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 9h18M9 9v12" stroke="currentColor" stroke-width="2"/><circle cx="15" cy="15" r="2" fill="currentColor"/></svg>
+            <span>Google Forms</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M9 8l6 4-6 4V8z" fill="currentColor"/></svg>
+            <span>Quizlet</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><path d="M4 19V9l8-5 8 5v10" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 19v-6h6v6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            <span>Moodle</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            <span>Coursera</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <span>edX</span>
+          </div>
+          <div class="marquee-item">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="currentColor" stroke-width="2"/><path d="M2 12h20M12 2c2.5 3 4 6.5 4 10s-1.5 7-4 10c-2.5-3-4-6.5-4-10s1.5-7 4-10z" stroke="currentColor" stroke-width="2"/></svg>
+            <span>Any Website</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -55,7 +143,7 @@
   <section id="features" class="features">
     <div class="container">
       <h2>Ace Every Question</h2>
-      <p class="section-subtitle">AnswerSnap uses AI vision to analyze any question type</p>
+      <p class="section-subtitle">Cheatly uses AI vision to analyze any question type</p>
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-icon">
@@ -107,7 +195,7 @@
   <section id="demo" class="demo">
     <div class="container">
       <h2>Try It — Double Click a Question</h2>
-      <p class="section-subtitle">See how AnswerSnap identifies and answers different question types</p>
+      <p class="section-subtitle">See how Cheatly identifies and answers different question types</p>
 
       <div class="demo-grid">
         <!-- Multiple Choice Demo -->
@@ -165,6 +253,79 @@
             Mitosis produces two genetically identical daughter cells for growth and repair, while meiosis produces four genetically unique gametes for sexual reproduction. Mitosis involves one division; meiosis involves two sequential divisions with crossing over.
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature Table -->
+  <section id="feature-table" class="feature-table">
+    <div class="container">
+      <h2>Works Everywhere. Answers Everything.</h2>
+      <p class="section-subtitle">Invisible. Undetectable. Unstoppable.</p>
+      <div class="ft-grid">
+
+        <div class="ft-group">
+          <div class="ft-group-header">
+            <div class="ft-group-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <h3>Any Platform</h3>
+          </div>
+          <ul class="ft-list">
+            <li><span class="ft-check">&#10003;</span> Any website or quiz platform</li>
+            <li><span class="ft-check">&#10003;</span> Incognito &amp; private browsing</li>
+            <li><span class="ft-check">&#10003;</span> Windows, Mac &amp; Chromebook</li>
+            <li><span class="ft-check">&#10003;</span> Works worldwide</li>
+            <li><span class="ft-badge ft-coming">Coming Soon</span> Lockdown Browser support</li>
+            <li><span class="ft-badge ft-coming">Coming Soon</span> Mobile (iOS &amp; Android)</li>
+          </ul>
+        </div>
+
+        <div class="ft-group">
+          <div class="ft-group-header">
+            <div class="ft-group-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </div>
+            <h3>100% Undetectable</h3>
+          </div>
+          <ul class="ft-list">
+            <li><span class="ft-check">&#10003;</span> Invisible mode — zero screen footprint</li>
+            <li><span class="ft-check">&#10003;</span> No tab switching needed</li>
+            <li><span class="ft-check">&#10003;</span> Silent auto-fill, no popups</li>
+            <li><span class="ft-check">&#10003;</span> Toggle instantly with Alt+A</li>
+          </ul>
+        </div>
+
+        <div class="ft-group">
+          <div class="ft-group-header">
+            <div class="ft-group-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <h3>Every Question Type</h3>
+          </div>
+          <ul class="ft-list">
+            <li><span class="ft-check">&#10003;</span> Multiple choice &amp; multi-select</li>
+            <li><span class="ft-check">&#10003;</span> Fill-in-the-blank &amp; short answer</li>
+            <li><span class="ft-check">&#10003;</span> Essays &amp; long-form</li>
+            <li><span class="ft-check">&#10003;</span> Math, matching &amp; image-based</li>
+          </ul>
+        </div>
+
+        <div class="ft-group">
+          <div class="ft-group-header">
+            <div class="ft-group-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </div>
+            <h3>Every Subject</h3>
+          </div>
+          <ul class="ft-list">
+            <li><span class="ft-check">&#10003;</span> Math, science &amp; engineering</li>
+            <li><span class="ft-check">&#10003;</span> English, history &amp; humanities</li>
+            <li><span class="ft-check">&#10003;</span> Photos, diagrams &amp; articles</li>
+            <li><span class="ft-check">&#10003;</span> Literally any subject you throw at it</li>
+          </ul>
+        </div>
+
       </div>
     </div>
   </section>
@@ -238,30 +399,75 @@
     </div>
   </section>
 
+  <!-- Testimonials -->
+  <section class="testimonials">
+    <div class="container">
+      <h2>Loved by Students</h2>
+      <p class="section-subtitle">What students are saying about Cheatly</p>
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <p class="testimonial-quote">"Finished my chem homework in 10 minutes instead of 2 hours. This thing is unreal."</p>
+          <p class="testimonial-author">— Jake, Sophomore</p>
+        </div>
+        <div class="testimonial-card">
+          <p class="testimonial-quote">"Double-click and the answer just fills in. It works on every quiz site I've tried."</p>
+          <p class="testimonial-author">— Maya, Freshman</p>
+        </div>
+        <div class="testimonial-card">
+          <p class="testimonial-quote">"Invisible mode is genius. Nothing shows on screen — the answer is just on my clipboard."</p>
+          <p class="testimonial-author">— Chris, Junior</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="pricing">
+    <div class="container">
+      <div class="pricing-card">
+        <div class="pricing-badge">7-Day Free Trial</div>
+        <h2>Ready to Ace Your Next Quiz?</h2>
+        <div class="pricing-price">
+          <span class="price-new">$25</span>
+          <span class="price-period">/month</span>
+        </div>
+        <p class="pricing-trial">Try free for 7 days — cancel anytime before your trial ends</p>
+        <ul class="pricing-features">
+          <li>&#10003; Unlimited questions</li>
+          <li>&#10003; All question types — MC, fill-in, essays &amp; more</li>
+          <li>&#10003; Works on any website</li>
+          <li>&#10003; All three display modes</li>
+        </ul>
+        <a href="https://answersnap-backend.fly.dev/checkout" class="btn btn-primary btn-large">Start Free Trial</a>
+        <p class="pricing-trust">No charge for 7 days &bull; Cancel Anytime</p>
+      </div>
+    </div>
+  </section>
+
   <!-- FAQ -->
   <section id="faq" class="faq">
     <div class="container">
       <h2>Frequently Asked Questions</h2>
       <div class="faq-list">
         <details class="faq-item">
-          <summary>What types of questions can AnswerSnap answer?</summary>
-          <p>AnswerSnap uses advanced AI vision to analyze screenshots, so it can handle virtually any question type: multiple choice, multiple select, fill-in-the-blank, matching, short answer, essay questions, math problems, and more.</p>
+          <summary>What types of questions can Cheatly answer?</summary>
+          <p>Cheatly uses advanced AI vision to analyze screenshots, so it can handle virtually any question type: multiple choice, multiple select, fill-in-the-blank, matching, short answer, essay questions, math problems, and more.</p>
         </details>
         <details class="faq-item">
-          <summary>How fast is AnswerSnap?</summary>
+          <summary>How fast is Cheatly?</summary>
           <p>Answers typically appear in 2-5 seconds, depending on the complexity of the question and your internet speed. The AI processes a screenshot of your screen and returns the answer almost instantly.</p>
         </details>
         <details class="faq-item">
           <summary>What platforms does it work on?</summary>
-          <p>AnswerSnap works on any website that runs in Chrome — Canvas, Blackboard, Google Forms, Quizlet, Coursera, edX, and any other web-based platform.</p>
+          <p>Cheatly works on any website that runs in Chrome — Canvas, Blackboard, Google Forms, Quizlet, Coursera, edX, and any other web-based platform.</p>
         </details>
         <details class="faq-item">
           <summary>Do I need my own API key?</summary>
-          <p>No! AnswerSnap works out of the box. We handle all the AI processing on our end so you can just install and start using it immediately — no setup required.</p>
+          <p>No! Cheatly works out of the box. We handle all the AI processing on our end so you can just install and start using it immediately — no setup required.</p>
         </details>
         <details class="faq-item">
           <summary>Is my data secure?</summary>
-          <p>AnswerSnap sends screenshots to our secure API for AI processing. No data is stored permanently. Screenshots are analyzed in real-time and immediately discarded.</p>
+          <p>Cheatly sends screenshots to our secure API for AI processing. No data is stored permanently. Screenshots are analyzed in real-time and immediately discarded.</p>
         </details>
         <details class="faq-item">
           <summary>How do the display modes work?</summary>
@@ -274,10 +480,11 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      <p>&copy; 2025 AnswerSnap. Built with AI.</p>
+      <p>&copy; 2025 Cheatly. Built with AI.</p>
     </div>
   </footer>
 
   <script src="script.js"></script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
