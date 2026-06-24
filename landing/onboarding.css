@@ -105,14 +105,12 @@
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: var(--accent-glow);
-  color: var(--accent-light);
   transition: all 0.25s;
 }
 
-.platform-card.selected .platform-icon {
-  background: rgba(52, 211, 153, 0.12);
-  color: var(--success);
+.platform-icon img {
+  border-radius: 10px;
+  object-fit: contain;
 }
 
 .platform-name {
