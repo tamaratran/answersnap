@@ -828,6 +828,9 @@ h2 {
   padding: 32px 0;
   border-top: 1px solid var(--border);
   text-align: center;
+}
+
+.has-sticky-cta .footer {
   padding-bottom: 80px;
 }
 
