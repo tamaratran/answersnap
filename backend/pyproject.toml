@@ -9,4 +9,8 @@ dependencies = [
     "pydantic",
     "opencv-python-headless",
     "numpy",
+    "aiosqlite",
+    "bcrypt",
+    "pyjwt",
+    "stripe",
 ]

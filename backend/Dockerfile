@@ -3,9 +3,11 @@ FROM python:3.12-slim
 WORKDIR /app
 
 COPY pyproject.toml .
-RUN pip install --no-cache-dir fastapi uvicorn[standard] httpx pydantic
+RUN pip install --no-cache-dir fastapi uvicorn[standard] httpx pydantic aiosqlite bcrypt pyjwt stripe
 
 COPY main.py .
+
+RUN mkdir -p /data
 
 EXPOSE 8080
 

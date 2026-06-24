@@ -4,7 +4,8 @@
  * Handles:
  * 1. Screenshot capture via chrome.tabs.captureVisibleTab
  * 2. AI vision API call (OpenAI GPT-4o)
- * 3. Message routing between content script and popup
+ * 3. Auth token management + subscription gating
+ * 4. Message routing between content script and popup
  */
 
 const BACKEND_URL = "https://answersnap-backend.fly.dev";
@@ -24,6 +25,11 @@ async function getSettings() {
   return { ...DEFAULT_SETTINGS, ...result.settings };
 }
 
+async function getAuthToken() {
+  const result = await chrome.storage.local.get("authToken");
+  return result.authToken || null;
+}
+
 async function captureScreenshot() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new Error("No active tab found");
@@ -36,16 +42,31 @@ async function captureScreenshot() {
 }
 
 async function queryBackend(screenshotDataUrl, selectedText) {
+  const token = await getAuthToken();
+  if (!token) {
+    throw new Error("LOGIN_REQUIRED");
+  }
+
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+
   const response = await fetch(`${BACKEND_URL}/answer`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       screenshot: screenshotDataUrl,
       selectedText: selectedText || "",
     }),
   });
+
+  if (response.status === 401) {
+    throw new Error("LOGIN_REQUIRED");
+  }
+  if (response.status === 403) {
+    throw new Error("SUBSCRIPTION_REQUIRED");
+  }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
@@ -59,8 +80,6 @@ async function queryBackend(screenshotDataUrl, selectedText) {
 }
 
 // ── Port Handler (content script) ────────────────────────────────────────────
-// Content script uses chrome.runtime.connect() which reliably wakes the
-// service worker even after it goes inactive in MV3.
 
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== "answersnap") return;
@@ -81,10 +100,8 @@ async function handlePortMessage(message, port) {
         port.postMessage({ error: "Cheatly is disabled." });
         return;
       }
-      // Capture screenshot here so it never round-trips through the content script
       const screenshot = await captureScreenshot();
       const answer = await queryBackend(screenshot, message.selectedText);
-
       port.postMessage({ answer, displayMode: settings.displayMode });
     } else if (message.type === "GET_SETTINGS") {
       const settings = await getSettings();
@@ -92,6 +109,9 @@ async function handlePortMessage(message, port) {
     } else if (message.type === "SAVE_SETTINGS") {
       await chrome.storage.local.set({ settings: message.settings });
       port.postMessage({ ok: true });
+    } else if (message.type === "CHECK_AUTH") {
+      const token = await getAuthToken();
+      port.postMessage({ authenticated: !!token });
     }
   } catch (err) {
     port.postMessage({ error: err.message });
@@ -108,7 +128,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "SAVE_SETTINGS") {
     chrome.storage.local.set({ settings: message.settings }).then(() => {
-      // Manage auto-disable timer on settings change from popup
       if (message.settings.enabled) {
         startAutoDisableTimer();
       } else {
@@ -117,6 +136,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       sendResponse({ ok: true });
     });
     return true;
+  }
+
+  if (message.type === "AUTH_CHANGED") {
+    sendResponse({ ok: true });
+    return false;
   }
 });
 
@@ -136,12 +160,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== AUTO_DISABLE_ALARM) return;
 
   const settings = await getSettings();
-  if (!settings.enabled) return; // Already off
+  if (!settings.enabled) return;
 
   settings.enabled = false;
   await chrome.storage.local.set({ settings });
 
-  // Notify active tab so toast shows
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.id) {
     chrome.tabs.sendMessage(tab.id, {
@@ -151,7 +174,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
-// Start timer on install/startup if enabled
 chrome.runtime.onInstalled.addListener(async () => {
   const settings = await getSettings();
   if (settings.enabled) startAutoDisableTimer();
@@ -170,7 +192,6 @@ chrome.commands.onCommand.addListener(async (command) => {
     settings.enabled = !settings.enabled;
     await chrome.storage.local.set({ settings });
 
-    // Manage auto-disable timer
     if (settings.enabled) {
       startAutoDisableTimer();
     } else {
