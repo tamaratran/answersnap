@@ -135,6 +135,19 @@ body {
   background-clip: text;
 }
 
+.hero-accuracy {
+  display: inline-block;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--success);
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  border-radius: 100px;
+  padding: 6px 20px;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+
 .hero-subtitle {
   font-size: 18px;
   color: var(--text-secondary);
@@ -711,6 +724,15 @@ h2 {
   margin-bottom: 20px;
 }
 
+.urgency-badge {
+  animation: urgency-pulse 2s ease-in-out infinite;
+}
+
+@keyframes urgency-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.3); }
+  50% { box-shadow: 0 0 16px 4px rgba(250, 204, 21, 0.15); }
+}
+
 .pricing-card h2 {
   margin-bottom: 20px;
 }
@@ -769,11 +791,47 @@ h2 {
   color: var(--text-muted);
 }
 
+/* Sticky CTA Bar */
+.sticky-cta-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: rgba(10, 10, 20, 0.95);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+  transform: translateY(0);
+}
+
+.sticky-cta-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.sticky-cta-text {
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+.sticky-cta-btn {
+  padding: 10px 24px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
 /* Footer */
 .footer {
   padding: 32px 0;
   border-top: 1px solid var(--border);
   text-align: center;
+}
+
+.has-sticky-cta .footer {
+  padding-bottom: 80px;
 }
 
 .footer p {
@@ -1008,6 +1066,17 @@ h2 {
 
   .hero {
     padding: 120px 0 60px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sticky-cta-text {
+    display: none;
+  }
+
+  .sticky-cta-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 

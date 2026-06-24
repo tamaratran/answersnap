@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cheatly — What Platform Do You Use?</title>
+  <meta name="description" content="Select your testing platform and see how Cheatly delivers 100% accuracy on any quiz." />
+  <meta name="theme-color" content="#0a0a14" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="onboarding.css" />
+  <link rel="icon" href="icon16.png" sizes="16x16" type="image/png" />
+  <link rel="icon" href="icon48.png" sizes="48x48" type="image/png" />
+  <link rel="icon" href="icon128.png" sizes="128x128" type="image/png" />
+  <link rel="apple-touch-icon" href="icon128.png" />
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-CF2V24H2RE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-CF2V24H2RE');
+  </script>
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="/" class="nav-logo">
+        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <span>Cheatly</span>
+      </a>
+    </div>
+  </nav>
+
+  <section class="onboarding-hero">
+    <div class="container">
+      <div class="onboarding-progress">
+        <div class="progress-step active">1</div>
+        <div class="progress-line"></div>
+        <div class="progress-step">2</div>
+      </div>
+      <h1>What platform do you use?</h1>
+      <p class="onboarding-subtitle">Select your testing platform below, or search for it</p>
+
+      <div class="platform-grid">
+        <button class="platform-card" data-platform="Canvas">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 7h10M7 12h10M7 17h6"/></svg>
+          </div>
+          <span class="platform-name">Canvas</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+        <button class="platform-card" data-platform="Blackboard">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="15" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+          </div>
+          <span class="platform-name">Blackboard</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+        <button class="platform-card" data-platform="Google Forms">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h2M9 17h2"/><circle cx="9" cy="13" r="0.5" fill="currentColor"/><circle cx="9" cy="17" r="0.5" fill="currentColor"/></svg>
+          </div>
+          <span class="platform-name">Google Forms</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+        <button class="platform-card" data-platform="Google Classroom">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="12" cy="11" r="3"/><path d="M7 20c0-2.8 2.2-5 5-5s5 2.2 5 5"/></svg>
+          </div>
+          <span class="platform-name">Google Classroom</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+        <button class="platform-card" data-platform="Quizlet">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+          </div>
+          <span class="platform-name">Quizlet</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+        <button class="platform-card" data-platform="Moodle">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </div>
+          <span class="platform-name">Moodle</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+        <button class="platform-card" data-platform="Kahoot">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <span class="platform-name">Kahoot</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+        <button class="platform-card" data-platform="Coursera">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>
+          </div>
+          <span class="platform-name">Coursera</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+        <button class="platform-card" data-platform="Khan Academy">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          </div>
+          <span class="platform-name">Khan Academy</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+        <button class="platform-card" data-platform="McGraw-Hill Connect">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          </div>
+          <span class="platform-name">McGraw-Hill</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+        <button class="platform-card" data-platform="Pearson MyLab">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <span class="platform-name">Pearson MyLab</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+        <button class="platform-card" data-platform="D2L Brightspace">
+          <div class="platform-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <span class="platform-name">Brightspace</span>
+          <span class="platform-check">&#10003;</span>
+        </button>
+      </div>
+
+      <div class="search-section">
+        <p class="search-label">Don't see your platform?</p>
+        <div class="search-wrapper">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="search-input" id="platform-search" placeholder="Type your platform name..." autocomplete="off" />
+        </div>
+        <div class="search-result hidden" id="search-result">
+          <div class="search-checking" id="search-checking">
+            <div class="checking-spinner"></div>
+            <span>Checking compatibility...</span>
+          </div>
+          <div class="search-confirmed hidden" id="search-confirmed">
+            <div class="confirmed-icon">&#10003;</div>
+            <div class="confirmed-text">
+              <span class="confirmed-platform" id="confirmed-platform"></span>
+              <span class="confirmed-msg">Supported with 100% accuracy</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="onboarding-cta hidden" id="onboarding-cta">
+        <div class="selected-summary" id="selected-summary"></div>
+        <a href="https://answersnap-backend.fly.dev/checkout" class="btn btn-primary btn-large onboarding-btn">Continue to Free Trial</a>
+        <p class="onboarding-trust">7-day free trial &bull; No charge today &bull; Cancel anytime</p>
+      </div>
+    </div>
+  </section>
+
+  <script src="onboarding.js"></script>
+  <script defer src="/_vercel/insights/script.js"></script>
+
+  <!-- GA4 CTA click tracking -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var checkoutBtn = document.querySelector('a.onboarding-btn');
+      if (checkoutBtn) {
+        checkoutBtn.addEventListener('click', function() {
+          gtag('event', 'click_continue_trial', { cta_location: 'onboarding' });
+        });
+      }
+    });
+  </script>
+</body>
+</html>
