@@ -12,6 +12,15 @@
   <link rel="icon" href="icon48.png" sizes="48x48" type="image/png" />
   <link rel="icon" href="icon128.png" sizes="128x128" type="image/png" />
   <link rel="apple-touch-icon" href="icon128.png" />
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-CF2V24H2RE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-CF2V24H2RE');
+  </script>
 </head>
 <body>
   <!-- Nav -->
@@ -152,5 +161,17 @@
 
   <script src="onboarding.js"></script>
   <script defer src="/_vercel/insights/script.js"></script>
+
+  <!-- GA4 CTA click tracking -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var checkoutBtn = document.querySelector('a.onboarding-btn');
+      if (checkoutBtn) {
+        checkoutBtn.addEventListener('click', function() {
+          gtag('event', 'click_continue_trial', { cta_location: 'onboarding' });
+        });
+      }
+    });
+  </script>
 </body>
 </html>
