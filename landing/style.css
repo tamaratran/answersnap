@@ -186,32 +186,67 @@ body {
   transform: translateY(-1px);
 }
 
-.hero-trust {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.hero-trust > span:first-child {
-  color: var(--text-muted);
+/* Platform Logos Marquee */
+.marquee-label {
+  text-align: center;
   font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
 }
 
-.trust-item {
-  padding: 4px 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  font-size: 12px;
+.logo-marquee {
+  width: 100%;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+.marquee-track {
+  display: flex;
+  gap: 48px;
+  animation: marquee-scroll 30s linear infinite;
+  width: max-content;
+}
+
+.marquee-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: color 0.3s;
+}
+
+.marquee-item:hover {
   color: var(--text-secondary);
-  transition: all 0.2s;
 }
 
-.trust-item:hover {
-  border-color: var(--accent);
-  color: var(--text-primary);
+.marquee-item svg {
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: opacity 0.3s;
+}
+
+.marquee-item:hover svg {
+  opacity: 0.8;
+}
+
+.marquee-item span {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.logo-marquee:hover .marquee-track {
+  animation-play-state: paused;
 }
 
 /* Sections */
