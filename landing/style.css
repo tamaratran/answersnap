@@ -729,6 +729,13 @@ h2 {
   text-decoration: line-through;
 }
 
+.pricing-trial {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  opacity: 0.9;
+}
+
 .price-new {
   font-size: 48px;
   font-weight: 800;
