@@ -568,7 +568,11 @@
         selectedText,
       });
 
-      if (response.error) {
+      if (response.error === "AUTH_REQUIRED") {
+        showToast("Log in to Cheatly to use this feature");
+      } else if (response.error === "SUBSCRIPTION_REQUIRED") {
+        showToast("Subscribe to Cheatly to get answers");
+      } else if (response.error) {
         showError(response.error);
       } else {
         showAnswer(response.answer, response.displayMode, clickTarget);

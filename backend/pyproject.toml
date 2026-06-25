@@ -9,4 +9,5 @@ dependencies = [
     "pydantic",
     "opencv-python-headless",
     "numpy",
+    "PyJWT",
 ]

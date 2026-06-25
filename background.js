@@ -35,17 +35,37 @@ async function captureScreenshot() {
   return dataUrl;
 }
 
+async function getAuthToken() {
+  const result = await chrome.storage.local.get("authToken");
+  return result.authToken || null;
+}
+
 async function queryBackend(screenshotDataUrl, selectedText) {
+  const token = await getAuthToken();
+
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${BACKEND_URL}/answer`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       screenshot: screenshotDataUrl,
       selectedText: selectedText || "",
     }),
   });
+
+  if (response.status === 401) {
+    // Token invalid/expired — clear auth state
+    await chrome.storage.local.remove(["authToken", "userEmail", "subscriptionStatus"]);
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  if (response.status === 403) {
+    throw new Error("SUBSCRIPTION_REQUIRED");
+  }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
@@ -117,6 +137,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       sendResponse({ ok: true });
     });
     return true;
+  }
+
+  if (message.type === "AUTH_CHANGED") {
+    // Auth state changed in popup — nothing extra needed,
+    // queryBackend reads token from storage each time.
+    sendResponse({ ok: true });
+    return false;
   }
 });
 
