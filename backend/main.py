@@ -1,10 +1,16 @@
 import os
+import sqlite3
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
+from contextlib import contextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 import httpx
+import jwt
 
 app = FastAPI(title="AnswerSnap API")
 
@@ -21,8 +27,93 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 LANDING_URL = os.environ.get("LANDING_URL", "https://cheatly.xyz")
 STRIPE_CHECKOUT_URL = "https://api.stripe.com/v1/checkout/sessions"
+
+JWT_SECRET = os.environ.get("JWT_SECRET", secrets.token_hex(32))
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRY_DAYS = 30
+
+DB_PATH = os.environ.get("DB_PATH", "/data/cheatly.db")
+
+
+# ── Database ────────────────────────────────────────────────────────────────
+
+def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    with get_db() as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                stripe_customer_id TEXT,
+                subscription_status TEXT DEFAULT 'none',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        db.commit()
+
+
+@contextmanager
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    h = hashlib.sha256((salt + password).encode()).hexdigest()
+    return f"{salt}:{h}"
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    salt, h = password_hash.split(":", 1)
+    return hashlib.sha256((salt + password).encode()).hexdigest() == h
+
+
+def create_jwt(user_id: int, email: str) -> str:
+    payload = {
+        "sub": str(user_id),
+        "email": email,
+        "exp": datetime.now(timezone.utc) + timedelta(days=JWT_EXPIRY_DAYS),
+        "iat": datetime.now(timezone.utc),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def decode_jwt(token: str) -> dict:
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+async def get_current_user(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token = authorization.split(" ", 1)[1]
+    claims = decode_jwt(token)
+    with get_db() as db:
+        user = db.execute(
+            "SELECT id, email, subscription_status, stripe_customer_id FROM users WHERE id = ?",
+            (int(claims["sub"]),),
+        ).fetchone()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return dict(user)
+
+
+@app.on_event("startup")
+def startup():
+    init_db()
 
 
 class AnswerRequest(BaseModel):
@@ -32,6 +123,27 @@ class AnswerRequest(BaseModel):
 
 class AnswerResponse(BaseModel):
     answer: str
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class CreateAccountRequest(BaseModel):
+    session_id: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    token: str
+    email: str
+    subscription_status: str
 
 
 class LocateRequest(BaseModel):
@@ -71,8 +183,235 @@ def build_prompt(selected_text: str) -> str:
     )
 
 
+# ── Auth Endpoints ──────────────────────────────────────────────────────────
+
+@app.post("/auth/register", response_model=AuthResponse)
+async def register(req: RegisterRequest):
+    email = req.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email")
+    if len(req.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    pw_hash = hash_password(req.password)
+    with get_db() as db:
+        existing = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        if existing:
+            raise HTTPException(status_code=409, detail="Email already registered")
+        cursor = db.execute(
+            "INSERT INTO users (email, password_hash) VALUES (?, ?)",
+            (email, pw_hash),
+        )
+        db.commit()
+        user_id = cursor.lastrowid
+
+    token = create_jwt(user_id, email)
+    return AuthResponse(token=token, email=email, subscription_status="none")
+
+
+@app.post("/auth/login", response_model=AuthResponse)
+async def login(req: LoginRequest):
+    email = req.email.strip().lower()
+    with get_db() as db:
+        user = db.execute(
+            "SELECT id, email, password_hash, subscription_status FROM users WHERE email = ?",
+            (email,),
+        ).fetchone()
+    if not user or not verify_password(req.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    token = create_jwt(user["id"], user["email"])
+    return AuthResponse(
+        token=token,
+        email=user["email"],
+        subscription_status=user["subscription_status"],
+    )
+
+
+@app.get("/auth/me")
+async def get_me(user: dict = Depends(get_current_user)):
+    return {
+        "email": user["email"],
+        "subscription_status": user["subscription_status"],
+    }
+
+
+@app.get("/auth/session-email")
+async def get_session_email(session_id: str):
+    """Get the customer email from a Stripe checkout session."""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{STRIPE_CHECKOUT_URL}/{session_id}",
+            headers={"Authorization": f"Bearer {STRIPE_SECRET_KEY}"},
+        )
+    if resp.status_code != 200:
+        raise HTTPException(status_code=400, detail="Invalid session")
+
+    session = resp.json()
+    email = session.get("customer_email") or session.get("customer_details", {}).get("email", "")
+    if not email:
+        raise HTTPException(status_code=400, detail="No email found in session")
+
+    return {"email": email}
+
+
+@app.post("/auth/create-account", response_model=AuthResponse)
+async def create_account_from_checkout(req: CreateAccountRequest):
+    """Create account using a Stripe checkout session ID.
+    Retrieves email from Stripe, creates user with active subscription."""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    if len(req.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    # Retrieve checkout session from Stripe
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            f"https://api.stripe.com/v1/checkout/sessions/{req.session_id}",
+            auth=(STRIPE_SECRET_KEY, ""),
+        )
+    if resp.status_code != 200:
+        raise HTTPException(status_code=400, detail="Invalid checkout session")
+
+    session = resp.json()
+    email = (session.get("customer_email") or session.get("customer_details", {}).get("email", "")).strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="No email found in checkout session")
+
+    stripe_customer_id = session.get("customer", "")
+    subscription_id = session.get("subscription", "")
+
+    # Determine subscription status from checkout session
+    payment_status = session.get("payment_status", "")
+    sub_status = "active" if payment_status == "paid" or subscription_id else "trialing"
+
+    pw_hash = hash_password(req.password)
+    with get_db() as db:
+        existing = db.execute("SELECT id, subscription_status FROM users WHERE email = ?", (email,)).fetchone()
+        if existing:
+            # Update existing user with subscription info and new password
+            db.execute(
+                "UPDATE users SET password_hash = ?, stripe_customer_id = ?, subscription_status = ? WHERE email = ?",
+                (pw_hash, stripe_customer_id, sub_status, email),
+            )
+            db.commit()
+            user_id = existing["id"]
+        else:
+            cursor = db.execute(
+                "INSERT INTO users (email, password_hash, stripe_customer_id, subscription_status) VALUES (?, ?, ?, ?)",
+                (email, pw_hash, stripe_customer_id, sub_status),
+            )
+            db.commit()
+            user_id = cursor.lastrowid
+
+    token = create_jwt(user_id, email)
+    return AuthResponse(token=token, email=email, subscription_status=sub_status)
+
+
+# ── Stripe Webhook ──────────────────────────────────────────────────────────
+
+@app.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhook events for subscription lifecycle."""
+    import hmac
+    import hashlib as _hashlib
+    import time
+
+    body = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+
+    if STRIPE_WEBHOOK_SECRET and sig_header:
+        # Verify webhook signature
+        elements = dict(item.split("=", 1) for item in sig_header.split(",") if "=" in item)
+        timestamp = elements.get("t", "")
+        signature = elements.get("v1", "")
+
+        if not timestamp or not signature:
+            raise HTTPException(status_code=400, detail="Invalid signature header")
+
+        # Check timestamp is within 5 minutes
+        if abs(time.time() - int(timestamp)) > 300:
+            raise HTTPException(status_code=400, detail="Webhook timestamp too old")
+
+        signed_payload = f"{timestamp}.{body.decode()}"
+        expected = hmac.new(
+            STRIPE_WEBHOOK_SECRET.encode(),
+            signed_payload.encode(),
+            _hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            raise HTTPException(status_code=400, detail="Invalid signature")
+
+    try:
+        event = __import__("json").loads(body)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    event_type = event.get("type", "")
+    data_object = event.get("data", {}).get("object", {})
+
+    if event_type in (
+        "customer.subscription.updated",
+        "customer.subscription.deleted",
+    ):
+        customer_id = data_object.get("customer", "")
+        status = data_object.get("status", "")
+
+        # Map Stripe statuses to our simplified statuses
+        status_map = {
+            "active": "active",
+            "trialing": "trialing",
+            "past_due": "past_due",
+            "canceled": "canceled",
+            "unpaid": "canceled",
+            "incomplete": "none",
+            "incomplete_expired": "canceled",
+        }
+        mapped_status = status_map.get(status, "none")
+
+        with get_db() as db:
+            db.execute(
+                "UPDATE users SET subscription_status = ? WHERE stripe_customer_id = ?",
+                (mapped_status, customer_id),
+            )
+            db.commit()
+
+    elif event_type == "checkout.session.completed":
+        customer_id = data_object.get("customer", "")
+        email = (
+            data_object.get("customer_email")
+            or data_object.get("customer_details", {}).get("email", "")
+        ).strip().lower()
+
+        if email and customer_id:
+            with get_db() as db:
+                existing = db.execute(
+                    "SELECT id FROM users WHERE email = ?", (email,)
+                ).fetchone()
+                if existing:
+                    db.execute(
+                        "UPDATE users SET stripe_customer_id = ?, subscription_status = 'active' WHERE email = ?",
+                        (customer_id, email),
+                    )
+                    db.commit()
+
+    return {"received": True}
+
+
+# ── Answer Endpoint (auth-gated) ────────────────────────────────────────────
+
 @app.post("/answer", response_model=AnswerResponse)
-async def get_answer(req: AnswerRequest):
+async def get_answer(req: AnswerRequest, user: dict = Depends(get_current_user)):
+    # Check subscription is active or trialing
+    if user["subscription_status"] not in ("active", "trialing"):
+        raise HTTPException(
+            status_code=403,
+            detail="Active subscription required. Visit cheatly.xyz to subscribe.",
+        )
+
     if not OPENAI_API_KEY:
         raise HTTPException(status_code=500, detail="API key not configured")
 
@@ -248,7 +587,7 @@ async def create_checkout():
         "mode": "subscription",
         "line_items[0][price]": STRIPE_PRICE_ID,
         "line_items[0][quantity]": "1",
-        "success_url": f"{LANDING_URL}/download.html",
+        "success_url": f"{LANDING_URL}/create-account.html?session_id={{CHECKOUT_SESSION_ID}}",
         "cancel_url": f"{LANDING_URL}/?checkout=cancelled",
         "allow_promotion_codes": "true",
         "subscription_data[trial_period_days]": "7",

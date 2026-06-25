@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Your Account — Cheatly</title>
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="icon16.png" sizes="16x16" type="image/png" />
+  <link rel="icon" href="icon48.png" sizes="48x48" type="image/png" />
+  <link rel="icon" href="icon128.png" sizes="128x128" type="image/png" />
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-CF2V24H2RE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-CF2V24H2RE');
+  </script>
+
+  <style>
+    .account-card {
+      max-width: 440px;
+      margin: 0 auto;
+      background: rgba(30, 30, 50, 0.6);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 16px;
+      padding: 40px 32px;
+      text-align: center;
+    }
+    .account-card h1 {
+      font-size: 1.75rem;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #818cf8, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .account-card p.subtitle {
+      color: #94a3b8;
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+    }
+    .form-group {
+      text-align: left;
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(15, 15, 26, 0.8);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 10px;
+      color: #e2e8f0;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus {
+      border-color: #6366f1;
+    }
+    .form-group input:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    .form-error {
+      color: #f87171;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      min-height: 20px;
+    }
+    .form-success {
+      color: #34d399;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+    }
+    .create-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .create-btn:hover { opacity: 0.9; }
+    .create-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .success-view {
+      display: none;
+      text-align: center;
+    }
+    .success-view .checkmark {
+      width: 64px;
+      height: 64px;
+      background: rgba(52, 211, 153, 0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .success-view .checkmark svg {
+      width: 32px;
+      height: 32px;
+      color: #34d399;
+    }
+    .success-view h2 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+    .success-view p {
+      color: #94a3b8;
+      margin-bottom: 24px;
+    }
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: inherit;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .download-btn:hover { opacity: 0.9; }
+
+    .page-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="/" class="nav-logo">
+        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <span>Cheatly</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <!-- Account Creation Form -->
+    <div class="account-card" id="form-view">
+      <h1>Create Your Account</h1>
+      <p class="subtitle">Set a password to access Cheatly from the extension</p>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" disabled placeholder="Loading..." />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="At least 6 characters" minlength="6" />
+      </div>
+
+      <div class="form-error" id="error"></div>
+
+      <button class="create-btn" id="create-btn" disabled>Create Account</button>
+    </div>
+
+    <!-- Success View -->
+    <div class="account-card success-view" id="success-view">
+      <div class="checkmark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h2>Account Created!</h2>
+      <p>Install the Cheatly extension, log in with your email and password, and start acing your quizzes.</p>
+      <a href="https://chromewebstore.google.com/detail/pgljbingjokidaklhfhndnfofldajafh" class="download-btn" target="_blank" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/>
+        </svg>
+        Add to Chrome
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const BACKEND_URL = "https://answersnap-backend.fly.dev";
+
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const createBtn = document.getElementById("create-btn");
+    const errorEl = document.getElementById("error");
+    const formView = document.getElementById("form-view");
+    const successView = document.getElementById("success-view");
+
+    // Get session_id from URL query params
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+
+    if (!sessionId) {
+      errorEl.textContent = "Invalid link. Please go through the checkout again.";
+      createBtn.disabled = true;
+    } else {
+      // Fetch email from Stripe session via backend
+      fetch(`${BACKEND_URL}/auth/session-email?session_id=${encodeURIComponent(sessionId)}`)
+        .then(r => {
+          if (!r.ok) throw new Error("Could not retrieve session info");
+          return r.json();
+        })
+        .then(data => {
+          emailInput.value = data.email;
+          emailInput.disabled = true;
+          createBtn.disabled = false;
+          passwordInput.focus();
+        })
+        .catch(() => {
+          errorEl.textContent = "Could not load your payment info. Please contact support.";
+        });
+    }
+
+    createBtn.addEventListener("click", () => {
+      const password = passwordInput.value;
+      if (password.length < 6) {
+        errorEl.textContent = "Password must be at least 6 characters";
+        return;
+      }
+
+      errorEl.textContent = "";
+      createBtn.disabled = true;
+      createBtn.textContent = "Creating...";
+
+      fetch(`${BACKEND_URL}/auth/create-account`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, password }),
+      })
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+          if (!ok) throw new Error(data.detail || "Account creation failed");
+          formView.style.display = "none";
+          successView.style.display = "";
+
+          // Track conversion event
+          if (typeof gtag === "function") {
+            gtag("event", "account_created", { method: "stripe_checkout" });
+          }
+        })
+        .catch(err => {
+          errorEl.textContent = err.message;
+          createBtn.disabled = false;
+          createBtn.textContent = "Create Account";
+        });
+    });
+
+    // Allow Enter key to submit
+    passwordInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !createBtn.disabled) {
+        createBtn.click();
+      }
+    });
+  </script>
+</body>
+</html>
