@@ -79,7 +79,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 def create_jwt(user_id: int, email: str) -> str:
     payload = {
-        "sub": user_id,
+        "sub": str(user_id),
         "email": email,
         "exp": datetime.now(timezone.utc) + timedelta(days=JWT_EXPIRY_DAYS),
         "iat": datetime.now(timezone.utc),
@@ -104,7 +104,7 @@ async def get_current_user(authorization: str = Header(None)):
     with get_db() as db:
         user = db.execute(
             "SELECT id, email, subscription_status, stripe_customer_id FROM users WHERE id = ?",
-            (claims["sub"],),
+            (int(claims["sub"]),),
         ).fetchone()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
