@@ -1,4 +1,5 @@
 import os
+import re
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +17,7 @@ app.add_middleware(
 )
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1")
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
@@ -47,27 +48,42 @@ class LocateResponse(BaseModel):
     confidence: str = "medium"
 
 
+SYSTEM_PROMPT = (
+    "You are an elite academic expert with deep knowledge across all subjects "
+    "including mathematics, science, history, literature, computer science, "
+    "economics, and more. You answer exam and quiz questions with perfect accuracy. "
+    "You ALWAYS reason through problems step by step before giving your final answer."
+)
+
+
 def build_prompt(selected_text: str) -> str:
     context_hint = ""
     if selected_text:
         context_hint = f'The user double-clicked near this text: "{selected_text}"\n\n'
 
     return (
-        f"{context_hint}You are an expert tutor. Look at this screenshot of a "
-        "question (exam, quiz, homework, etc.).\n\n"
+        f"{context_hint}Look at this screenshot of a question (exam, quiz, homework, etc.).\n\n"
         "Your job:\n"
         "1. Identify the SINGLE question closest to where the user double-clicked.\n"
-        "2. Determine the correct answer for ONLY that one question.\n"
-        "3. Return ONLY the answer in a concise format.\n\n"
-        "Rules:\n"
-        '- For multiple choice: return the letter and brief text, e.g. "C. 2x + 2"\n'
-        '- For multiple select: return all correct letters, e.g. "A, C"\n'
-        "- For fill-in-the-blank: return just the answer value\n"
+        "2. Read the question AND all answer choices very carefully.\n"
+        "3. Reason through the problem step by step inside <reasoning> tags.\n"
+        "4. After reasoning, output your final answer inside <answer> tags.\n\n"
+        "Format rules:\n"
+        '- For multiple choice: return ONLY the letter and text, e.g. <answer>C. 2x + 2</answer>\n'
+        '- For multiple select: return all correct options, e.g. <answer>A, C</answer>\n'
+        "- For fill-in-the-blank: return just the answer value, e.g. <answer>42</answer>\n"
+        "- For true/false: return the answer, e.g. <answer>True</answer>\n"
         "- For short answer / essay: provide a concise but complete answer\n"
-        "- Answer ONLY ONE question \u2014 the one nearest to the user's click.\n"
-        "- Be direct. No preamble or explanation unless the question asks for it.\n"
-        '- If you cannot determine the answer with confidence, say "Uncertain: " '
-        "followed by your best guess."
+        "- Answer ONLY ONE question \u2014 the one nearest to the user's click.\n\n"
+        "IMPORTANT:\n"
+        "- Read EVERY answer option before choosing. Do not pick the first plausible one.\n"
+        "- For math: show your work in <reasoning>. Double-check arithmetic.\n"
+        "- For science: apply the correct formula or principle.\n"
+        "- If the question shows a graph, table, or diagram, analyze it carefully.\n"
+        "- NEVER guess. If you are unsure, reason more carefully.\n\n"
+        "Example:\n"
+        "<reasoning>The question asks for the derivative of x^2. Using the power rule: d/dx(x^2) = 2x.</reasoning>\n"
+        "<answer>B. 2x</answer>"
     )
 
 
@@ -87,6 +103,10 @@ async def get_answer(req: AnswerRequest):
         "model": OPENAI_MODEL,
         "messages": [
             {
+                "role": "system",
+                "content": SYSTEM_PROMPT,
+            },
+            {
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
@@ -97,7 +117,8 @@ async def get_answer(req: AnswerRequest):
                 ],
             }
         ],
-        "max_tokens": 1024,
+        "max_tokens": 2048,
+        "temperature": 0,
     }
 
     async with httpx.AsyncClient(timeout=60.0) as client:
@@ -118,9 +139,20 @@ async def get_answer(req: AnswerRequest):
         raise HTTPException(status_code=resp.status_code, detail=detail)
 
     data = resp.json()
-    answer = data["choices"][0]["message"]["content"].strip()
+    raw = data["choices"][0]["message"]["content"].strip()
+
+    # Extract answer from <answer> tags if present
+    answer = _extract_answer(raw)
 
     return AnswerResponse(answer=answer)
+
+
+def _extract_answer(raw: str) -> str:
+    """Pull the final answer from <answer>...</answer> tags, falling back to raw text."""
+    match = re.search(r"<answer>(.*?)</answer>", raw, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return raw
 
 
 @app.post("/locate", response_model=LocateResponse)

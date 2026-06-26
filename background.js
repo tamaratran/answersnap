@@ -29,8 +29,7 @@ async function captureScreenshot() {
   if (!tab?.id) throw new Error("No active tab found");
 
   const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-    format: "jpeg",
-    quality: 80,
+    format: "png",
   });
   return dataUrl;
 }
