@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cheatly — Instant AI Answers On Any Question</title>
   <meta name="description" content="Double-click any question on your screen and get the answer instantly. Works on Canvas, Blackboard, Google Forms, and any website. AI-powered Chrome extension." />
-  <meta name="theme-color" content="#0a0a14" />
+  <meta name="theme-color" content="#10b981" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
@@ -43,7 +43,7 @@
   <nav class="nav">
     <div class="container nav-inner">
       <a href="#" class="nav-logo">
-        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <span class="logo-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
         <span>Cheatly</span>
       </a>
       <div class="nav-links">
@@ -67,9 +67,10 @@
         Works on any website, any platform.
       </p>
       <div class="hero-actions">
-        <a href="onboarding.html" class="btn btn-primary">Get Started</a>
+        <a href="https://answersnap-backend.fly.dev/checkout" class="btn btn-primary">Try Free for 7 Days</a>
         <a href="#demo" class="btn btn-secondary">See Demo</a>
       </div>
+      <p style="font-size:14px; color:#475569; margin-bottom: 32px;">Then $25/month &bull; Cancel anytime</p>
       <div class="trust-bar">
         <span>&#10003; Cancel Anytime</span>
         <span>&#10003; Satisfaction Guaranteed</span>
@@ -224,7 +225,7 @@
           <li>&#10003; Works on any website</li>
           <li>&#10003; All three display modes</li>
         </ul>
-        <a href="onboarding.html" class="btn btn-primary btn-large">Get Started</a>
+        <a href="https://answersnap-backend.fly.dev/checkout" class="btn btn-primary btn-large">Try Free for 7 Days</a>
         <p class="pricing-trust">No charge for 7 days &bull; Cancel Anytime</p>
       </div>
     </div>
@@ -438,7 +439,7 @@
   <div class="sticky-cta-bar">
     <div class="container sticky-cta-inner">
       <span class="sticky-cta-text">Start Free Trial — <strong>7 Days Free</strong></span>
-      <a href="onboarding.html" class="btn btn-primary sticky-cta-btn">Get Started</a>
+      <a href="https://answersnap-backend.fly.dev/checkout" class="btn btn-primary sticky-cta-btn">Try Free for 7 Days</a>
     </div>
   </div>
 
@@ -448,7 +449,7 @@
   <!-- GA4 CTA click tracking -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      document.querySelectorAll('a[href="onboarding.html"]').forEach(function(link) {
+      document.querySelectorAll('a[href="https://answersnap-backend.fly.dev/checkout"]').forEach(function(link) {
         var location = 'unknown';
         if (link.closest('.hero')) location = 'hero';
         else if (link.closest('.pricing')) location = 'pricing';
