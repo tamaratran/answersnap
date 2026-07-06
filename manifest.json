@@ -1,13 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Cheatly — AI Answer Any Question",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Double-click any question for instant AI answers. Auto-clicks multiple choice, fills blanks, and types short answers.",
   "minimum_chrome_version": "116",
   "permissions": [
     "activeTab",
     "storage",
-    "scripting",
     "alarms"
   ],
   "host_permissions": [
