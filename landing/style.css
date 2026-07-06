@@ -82,6 +82,12 @@ body {
   color: white;
 }
 
+.nav-logo .logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
 .nav-links {
   display: flex;
   gap: 32px;
