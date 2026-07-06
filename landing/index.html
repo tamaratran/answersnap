@@ -23,6 +23,9 @@
   <meta name="twitter:description" content="Double-click any question on your screen and get the answer instantly. Works on any website." />
   <meta name="twitter:image" content="https://cheatly.xyz/og-image.png" />
 
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="icon16.png" sizes="16x16" type="image/png" />
   <link rel="icon" href="icon48.png" sizes="48x48" type="image/png" />
@@ -53,8 +56,18 @@
         <a href="#pricing">Pricing</a>
         <a href="#faq">FAQ</a>
       </div>
+      <button class="nav-hamburger" aria-label="Menu" onclick="this.classList.toggle('open');document.querySelector('.nav-mobile-menu').classList.toggle('open')">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </nav>
+  <div class="nav-mobile-menu">
+    <a href="#features" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">Features</a>
+    <a href="#demo" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">Demo</a>
+    <a href="#how-it-works" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">How It Works</a>
+    <a href="#pricing" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">Pricing</a>
+    <a href="#faq" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">FAQ</a>
+  </div>
 
   <!-- Hero -->
   <section class="hero">
