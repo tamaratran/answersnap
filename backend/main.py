@@ -45,6 +45,14 @@ stripe.api_key = STRIPE_SECRET_KEY
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
+
+    # Migrate legacy schema: old table had subscription_status + created_at INTEGER NOT NULL
+    # which breaks INSERTs in the new code. Recreate with the correct schema.
+    cursor = conn.execute("SELECT sql FROM sqlite_master WHERE name='users'")
+    row = cursor.fetchone()
+    if row and "subscription_status" in row[0]:
+        conn.execute("DROP TABLE users")
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
