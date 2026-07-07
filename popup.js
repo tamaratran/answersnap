@@ -23,6 +23,7 @@ const userEmailEl = document.getElementById("user-email");
 const subBadge = document.getElementById("sub-badge");
 const subDetail = document.getElementById("sub-detail");
 const subscribeCta = document.getElementById("subscribe-cta");
+const subscribeLink = document.getElementById("subscribe-link");
 const settingsSection = document.getElementById("settings-section");
 
 let currentMode = "homework";
@@ -153,6 +154,7 @@ function showMainView(email, subInfo) {
     subBadge.className = "sub-badge inactive";
     subDetail.textContent = "";
     subscribeCta.classList.remove("hidden");
+    subscribeLink.href = `${BACKEND_URL}/checkout?email=${encodeURIComponent(email)}`;
     settingsSection.classList.add("hidden");
   }
 }
