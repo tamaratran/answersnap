@@ -38,6 +38,12 @@ AUTH_REQUIRED = os.environ.get("AUTH_REQUIRED", "false").lower() == "true"
 
 RATE_LIMIT_MINUTES = int(os.environ.get("RATE_LIMIT_MINUTES", "60"))
 
+WHITELISTED_EMAILS = [
+    e.strip().lower()
+    for e in os.environ.get("WHITELISTED_EMAILS", "").split(",")
+    if e.strip()
+]
+
 stripe.api_key = STRIPE_SECRET_KEY
 
 # ── Database ──────────────────────────────────────────────────────────────────
@@ -339,6 +345,18 @@ async def get_me(request: Request):
     if not row:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Whitelisted emails appear as subscribed (creator/team access)
+    if email.lower() in WHITELISTED_EMAILS:
+        return SubscriptionStatus(
+            email=email,
+            subscribed=True,
+            trial=False,
+            plan="Creator",
+            current_period_end="",
+            rate_limited=False,
+            session_minutes_remaining=RATE_LIMIT_MINUTES,
+        )
+
     stripe_customer_id = row[0]
     sub_info = await check_stripe_subscription(stripe_customer_id)
 
@@ -421,33 +439,35 @@ async def get_answer(req: AnswerRequest, request: Request):
         user = await get_current_user(request)
         email = user["sub"]
 
-        db = await get_db()
-        try:
-            cursor = await db.execute(
-                "SELECT stripe_customer_id FROM users WHERE email = ?", (email,)
-            )
-            row = await cursor.fetchone()
-        finally:
-            await db.close()
+        # Whitelisted emails bypass subscription + rate limit checks
+        if email.lower() not in WHITELISTED_EMAILS:
+            db = await get_db()
+            try:
+                cursor = await db.execute(
+                    "SELECT stripe_customer_id FROM users WHERE email = ?", (email,)
+                )
+                row = await cursor.fetchone()
+            finally:
+                await db.close()
 
-        if not row or not row[0]:
-            raise HTTPException(status_code=403, detail="No subscription found. Subscribe at https://cheatly.io")
+            if not row or not row[0]:
+                raise HTTPException(status_code=403, detail="No subscription found. Subscribe at https://cheatly.io")
 
-        sub_info = await check_stripe_subscription(row[0])
-        if not sub_info["subscribed"]:
-            raise HTTPException(status_code=403, detail="Subscription inactive. Subscribe at https://cheatly.io")
+            sub_info = await check_stripe_subscription(row[0])
+            if not sub_info["subscribed"]:
+                raise HTTPException(status_code=403, detail="Subscription inactive. Subscribe at https://cheatly.io")
 
-        # Rate limiting: check if user's 1-hour session has expired
-        rate_info = await check_rate_limit(email)
-        if rate_info["limited"]:
-            raise HTTPException(
-                status_code=429,
-                detail="Session expired. Re-enable the extension to continue.",
-            )
+            # Rate limiting: check if user's 1-hour session has expired
+            rate_info = await check_rate_limit(email)
+            if rate_info["limited"]:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Session expired. Re-enable the extension to continue.",
+                )
 
-        # Start a usage session on first request if none active
-        if rate_info["minutes_remaining"] == RATE_LIMIT_MINUTES:
-            await start_usage_session(email)
+            # Start a usage session on first request if none active
+            if rate_info["minutes_remaining"] == RATE_LIMIT_MINUTES:
+                await start_usage_session(email)
     else:
         # Optional: log if user is authenticated (for analytics), but don't gate
         user = await get_optional_user(request)
