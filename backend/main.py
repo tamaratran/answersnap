@@ -36,6 +36,8 @@ DB_PATH = os.environ.get("DB_PATH", "/data/cheatly.db")
 # Set to False once the new extension version is approved on Chrome Web Store.
 AUTH_REQUIRED = os.environ.get("AUTH_REQUIRED", "false").lower() == "true"
 
+RATE_LIMIT_MINUTES = int(os.environ.get("RATE_LIMIT_MINUTES", "60"))
+
 stripe.api_key = STRIPE_SECRET_KEY
 
 # ── Database ──────────────────────────────────────────────────────────────────
@@ -50,6 +52,14 @@ def init_db():
             password_hash TEXT NOT NULL,
             stripe_customer_id TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS usage_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_email TEXT NOT NULL,
+            started_at TEXT NOT NULL,
+            active INTEGER DEFAULT 1
         )
     """)
     conn.commit()
@@ -119,6 +129,8 @@ class SubscriptionStatus(BaseModel):
     trial: bool = False
     plan: str = ""
     current_period_end: str = ""
+    rate_limited: bool = False
+    session_minutes_remaining: int = -1
 
 
 # ── Auth Helpers ──────────────────────────────────────────────────────────────
@@ -167,6 +179,44 @@ async def get_optional_user(request: Request) -> Optional[dict]:
         return jwt.decode(auth_header[7:], JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
         return None
+
+
+async def check_rate_limit(email: str) -> dict:
+    """Check if user has an active session within the rate limit window."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT started_at FROM usage_sessions WHERE user_email = ? AND active = 1 ORDER BY id DESC LIMIT 1",
+            (email,),
+        )
+        row = await cursor.fetchone()
+    finally:
+        await db.close()
+
+    if not row:
+        return {"limited": False, "minutes_remaining": RATE_LIMIT_MINUTES}
+
+    started = datetime.fromisoformat(row[0])
+    elapsed = datetime.now(timezone.utc) - started
+    remaining = timedelta(minutes=RATE_LIMIT_MINUTES) - elapsed
+
+    if remaining.total_seconds() <= 0:
+        return {"limited": True, "minutes_remaining": 0}
+
+    return {"limited": False, "minutes_remaining": int(remaining.total_seconds() / 60)}
+
+
+async def start_usage_session(email: str):
+    """Create a new usage session for the user (called on first /answer or reset)."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "INSERT INTO usage_sessions (user_email, started_at) VALUES (?, ?)",
+            (email, datetime.now(timezone.utc).isoformat()),
+        )
+        await db.commit()
+    finally:
+        await db.close()
 
 
 async def check_stripe_subscription(stripe_customer_id: str) -> dict:
@@ -284,7 +334,33 @@ async def get_me(request: Request):
     stripe_customer_id = row[0]
     sub_info = await check_stripe_subscription(stripe_customer_id)
 
-    return SubscriptionStatus(email=email, **sub_info)
+    rate_info = await check_rate_limit(email)
+
+    return SubscriptionStatus(
+        email=email,
+        rate_limited=rate_info["limited"],
+        session_minutes_remaining=rate_info["minutes_remaining"],
+        **sub_info,
+    )
+
+
+@app.post("/auth/reset-session")
+async def reset_session(request: Request):
+    """Reset the user's usage session timer (called when they re-enable the extension)."""
+    user = await get_current_user(request)
+    email = user["sub"]
+
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE usage_sessions SET active = 0 WHERE user_email = ? AND active = 1",
+            (email,),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+    return {"ok": True, "message": "Session reset. You have a new 1-hour window."}
 
 
 # ── AI Endpoints ──────────────────────────────────────────────────────────────
@@ -352,6 +428,18 @@ async def get_answer(req: AnswerRequest, request: Request):
         sub_info = await check_stripe_subscription(row[0])
         if not sub_info["subscribed"]:
             raise HTTPException(status_code=403, detail="Subscription inactive. Subscribe at https://cheatly.io")
+
+        # Rate limiting: check if user's 1-hour session has expired
+        rate_info = await check_rate_limit(email)
+        if rate_info["limited"]:
+            raise HTTPException(
+                status_code=429,
+                detail="Session expired. Re-enable the extension to continue.",
+            )
+
+        # Start a usage session on first request if none active
+        if rate_info["minutes_remaining"] == RATE_LIMIT_MINUTES:
+            await start_usage_session(email)
     else:
         # Optional: log if user is authenticated (for analytics), but don't gate
         user = await get_optional_user(request)

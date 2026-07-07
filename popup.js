@@ -139,7 +139,13 @@ function showMainView(email, subInfo) {
     const cls = subInfo.trial ? "trial" : "active";
     subBadge.textContent = label;
     subBadge.className = `sub-badge ${cls}`;
-    subDetail.textContent = subInfo.plan || "";
+    if (subInfo.rate_limited) {
+      subDetail.textContent = "Session expired — toggle off and on to reset";
+    } else if (subInfo.session_minutes_remaining >= 0 && subInfo.session_minutes_remaining < 60) {
+      subDetail.textContent = `${subInfo.session_minutes_remaining} min remaining`;
+    } else {
+      subDetail.textContent = subInfo.plan || "";
+    }
     subscribeCta.classList.add("hidden");
     settingsSection.classList.remove("hidden");
   } else {
