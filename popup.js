@@ -4,7 +4,7 @@
  * Manages auth state and extension settings.
  */
 
-const BACKEND_URL = "https://answersnap-backend.fly.dev";
+const BACKEND_URL = "https://cheatly-backend.fly.dev";
 
 const authView = document.getElementById("auth-view");
 const mainView = document.getElementById("main-view");
