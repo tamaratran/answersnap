@@ -813,18 +813,19 @@ async def stripe_webhook(request: Request):
     sig = request.headers.get("stripe-signature", "")
 
     if STRIPE_WEBHOOK_SECRET:
+        # Verify the signature; ignore the returned object and read fields from the
+        # plain-dict parse below (the stripe SDK's StripeObject doesn't expose .get).
         try:
-            event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
+            stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid payload")
         except stripe.SignatureVerificationError:
             raise HTTPException(status_code=400, detail="Invalid signature")
-    else:
-        # No secret configured (e.g. local/dev) — parse without verification.
-        try:
-            event = json.loads(payload)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid payload")
+
+    try:
+        event = json.loads(payload)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid payload")
 
     if event.get("type") == "checkout.session.completed":
         session = event["data"]["object"]
