@@ -31,7 +31,7 @@ The app uses OS-level APIs to create an invisible overlay window that is physica
 
 | Feature | Chrome Extension | Desktop App Equivalent |
 |---------|-----------------|----------------------|
-| Trigger | Double-click question text | Global hotkey (Ctrl+Shift+A) |
+| Trigger | Double-click question text | Global double-click (OS-level) or Ctrl+Shift+A |
 | Screenshot | `chrome.tabs.captureVisibleTab()` (JPEG q80) | Native screen capture (full screen or region) |
 | AI Backend | POST to `/answer` with screenshot + selectedText | Same — POST to `/answer` with screenshot |
 | Answer Display | Auto-fills MC/checkboxes/text inputs on page | Overlay window showing the answer text |
@@ -473,7 +473,7 @@ Minimal dependency tree — only Electron + one native screenshot package.
 |--------|-----------------|-------------|
 | **Works in lockdown browsers** | No | Yes |
 | **Auto-fills answers on page** | Yes (clicks/types) | No (user reads + manually enters) |
-| **Trigger mechanism** | Double-click text | Global hotkey |
+| **Trigger mechanism** | Double-click text | Global double-click (OS-level) or hotkey |
 | **AI context** | Selected text + screenshot | Screenshot only |
 | **Visibility** | Has Chrome extension icon | Completely invisible |
 | **Install friction** | Chrome Web Store | Download exe from website |

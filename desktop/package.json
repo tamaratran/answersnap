@@ -15,7 +15,8 @@
   "license": "PROPRIETARY",
   "dependencies": {
     "@nut-tree-fork/nut-js": "^4.2.6",
-    "screenshot-desktop": "^1.15.0"
+    "screenshot-desktop": "^1.15.0",
+    "uiohook-napi": "^1.5.4"
   },
   "devDependencies": {
     "electron": "^33.0.0",
