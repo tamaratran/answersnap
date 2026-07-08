@@ -1,5 +1,5 @@
 [project]
-name = "answersnap-backend"
+name = "cheatly-backend"
 version = "1.0.0"
 requires-python = ">=3.11"
 dependencies = [
@@ -9,4 +9,8 @@ dependencies = [
     "pydantic",
     "opencv-python-headless",
     "numpy",
+    "bcrypt",
+    "PyJWT",
+    "aiosqlite",
+    "stripe",
 ]

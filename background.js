@@ -3,8 +3,9 @@
  *
  * Handles:
  * 1. Screenshot capture via chrome.tabs.captureVisibleTab
- * 2. AI vision API call (OpenAI GPT-4o)
- * 3. Message routing between content script and popup
+ * 2. AI vision API call (OpenAI GPT-4.1)
+ * 3. Auth token management + subscription gating
+ * 4. Message routing between content script and popup
  */
 
 const BACKEND_URL = "https://answersnap-backend.fly.dev";
@@ -24,6 +25,11 @@ async function getSettings() {
   return { ...DEFAULT_SETTINGS, ...result.settings };
 }
 
+async function getAuthToken() {
+  const result = await chrome.storage.local.get("authToken");
+  return result.authToken || null;
+}
+
 async function captureScreenshot() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new Error("No active tab found");
@@ -35,16 +41,28 @@ async function captureScreenshot() {
 }
 
 async function queryBackend(screenshotDataUrl, selectedText) {
+  const token = await getAuthToken();
+
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${BACKEND_URL}/answer`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       screenshot: screenshotDataUrl,
       selectedText: selectedText || "",
     }),
   });
+
+  if (response.status === 401) {
+    throw new Error("LOGIN_REQUIRED");
+  }
+  if (response.status === 403) {
+    throw new Error("SUBSCRIPTION_REQUIRED");
+  }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
