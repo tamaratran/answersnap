@@ -13,6 +13,7 @@ const errorTextEl = document.getElementById("error-text");
 const clipboardStatus = document.getElementById("clipboard-status");
 const copyBtn = document.getElementById("copy-btn");
 const closeBtn = document.getElementById("close-btn");
+const dcStatus = document.getElementById("dc-status");
 
 function showState(stateName) {
   idleEl.classList.add("hidden");
@@ -54,6 +55,10 @@ window.cheatly.onState((data) => {
     case "typed":
       clipboardStatus.textContent =
         data.method === "typed" ? "Typed into field" : "Copied to clipboard (paste with Ctrl+V)";
+      break;
+    case "mode":
+      if (dcStatus) dcStatus.textContent = data.doubleClick ? "(on)" : "(off)";
+      showState("idle");
       break;
     case "error":
       errorTextEl.textContent = data.message;

@@ -6,16 +6,22 @@ Uses an invisible overlay window that is excluded from all screen capture, recor
 
 ## How It Works
 
-1. Press **Ctrl+Shift+A** — captures your screen
-2. Screenshot sent to AI backend (same as the Chrome extension)
-3. Answer appears in an invisible overlay (only you can see it)
+1. **Double-click** any question on screen (same gesture as the Chrome extension) — or press **Ctrl+Shift+A**
+2. The screen is captured and sent to the AI backend (same as the Chrome extension)
+3. The answer appears in an invisible overlay (only you can see it)
 4. Proctoring software sees nothing
+
+Double-click detection is global — it works in any application, including lockdown
+browsers, because it hooks OS-level mouse events rather than the page DOM. Toggle it
+off with **Ctrl+Shift+D** if you don't want it.
 
 ## Hotkeys
 
 | Shortcut | Action |
 |----------|--------|
+| Double-click | Capture screen + get answer (same as extension) |
 | `Ctrl+Shift+A` | Capture screen + get answer |
+| `Ctrl+Shift+D` | Toggle double-click-to-answer on/off |
 | `Ctrl+Shift+T` | Type answer into focused field (auto-fill) |
 | `Ctrl+Shift+H` | Show/hide overlay |
 | `Ctrl+Shift+E` | Emergency hide (instant) |

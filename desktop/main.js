@@ -10,6 +10,7 @@ const path = require("path");
 const { captureScreen } = require("./lib/capture");
 const { queryBackend, locateAnswer } = require("./lib/backend");
 const { copyToClipboard, typeAnswer, clickAtPosition, isMCAnswer, stripQuotes } = require("./lib/autofill");
+const { startDoubleClickListener, stopDoubleClickListener, setSuppressed } = require("./lib/dblclick");
 
 // Prevent multiple instances
 const gotTheLock = app.requestSingleInstanceLock();
@@ -20,6 +21,10 @@ if (!gotTheLock) {
 let overlayWindow = null;
 let isQuerying = false;
 let lastAnswer = "";
+
+// When true, double-clicking anywhere on screen triggers an answer (mirrors the
+// Chrome extension). Toggle with Ctrl+Shift+D.
+let doubleClickEnabled = true;
 
 // ── App Configuration ────────────────────────────────────────────────────────
 
@@ -109,11 +114,52 @@ function registerHotkeys() {
     overlayWindow.show();
   });
 
+  // Toggle double-click-to-answer mode
+  globalShortcut.register("CommandOrControl+Shift+D", () => {
+    doubleClickEnabled = !doubleClickEnabled;
+    overlayWindow.show();
+    overlayWindow.webContents.send("state", {
+      type: "mode",
+      doubleClick: doubleClickEnabled,
+    });
+  });
+
   // Quit the app entirely
   globalShortcut.register("CommandOrControl+Shift+Q", () => {
     app.isQuitting = true;
     app.quit();
   });
+}
+
+// ── Global Double-Click ──────────────────────────────────────────────────────
+
+/**
+ * Decide whether a global click should be ignored: while a query is running,
+ * when double-click mode is off, or when the click lands on our own overlay.
+ */
+function shouldIgnoreClick(pos) {
+  if (!doubleClickEnabled) return true;
+  if (isQuerying) return true;
+  if (overlayWindow && overlayWindow.isVisible()) {
+    try {
+      const b = screen.dipToScreenRect(overlayWindow, overlayWindow.getBounds());
+      if (pos.x >= b.x && pos.x <= b.x + b.width && pos.y >= b.y && pos.y <= b.y + b.height) {
+        return true;
+      }
+    } catch (_) {
+      // If conversion fails, fall through and don't ignore.
+    }
+  }
+  return false;
+}
+
+function registerDoubleClick() {
+  const ok = startDoubleClickListener(() => {
+    captureAndAnswer();
+  }, shouldIgnoreClick);
+  if (!ok) {
+    console.error("Global double-click listener unavailable — use Ctrl+Shift+A instead.");
+  }
 }
 
 // ── Core Logic ───────────────────────────────────────────────────────────────
@@ -125,6 +171,10 @@ async function captureAndAnswer() {
   let screenshotBase64 = null;
 
   try {
+    // Ignore our own synthetic clicks (auto-fill) so they aren't read as a
+    // user double-click.
+    setSuppressed(true);
+
     // Hide overlay during capture to prevent it from appearing in screenshot
     // (content protection only works on Windows/macOS, not Linux)
     overlayWindow.hide();
@@ -156,6 +206,7 @@ async function captureAndAnswer() {
     });
   } finally {
     isQuerying = false;
+    setSuppressed(false);
   }
 }
 
@@ -253,10 +304,12 @@ ipcMain.on("set-ignore-mouse", (_event, ignore) => {
 app.whenReady().then(() => {
   createOverlayWindow();
   registerHotkeys();
+  registerDoubleClick();
 });
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
+  stopDoubleClickListener();
 });
 
 app.on("window-all-closed", () => {

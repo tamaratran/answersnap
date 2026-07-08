@@ -5,7 +5,7 @@
  * the Chrome extension uses) and returns the AI-generated answer.
  */
 
-const BACKEND_URL = "https://answersnap-backend.fly.dev";
+const BACKEND_URL = process.env.CHEATLY_BACKEND_URL || "https://answersnap-backend.fly.dev";
 
 async function queryBackend(screenshotDataUrl) {
   const response = await fetch(`${BACKEND_URL}/answer`, {
