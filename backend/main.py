@@ -1,6 +1,9 @@
+import hashlib
+import json
 import os
 import re
 import sqlite3
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -23,8 +26,18 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 LANDING_URL = os.environ.get("LANDING_URL", "https://cheatly.io")
 STRIPE_CHECKOUT_URL = "https://api.stripe.com/v1/checkout/sessions"
+
+# ── Ad tracking (server-side Conversions API / Events API) ──────────────────────
+META_PIXEL_ID = os.environ.get("META_PIXEL_ID", "")
+META_CAPI_TOKEN = os.environ.get("META_CAPI_TOKEN", "")
+META_GRAPH_VERSION = os.environ.get("META_GRAPH_VERSION", "v19.0")
+TIKTOK_PIXEL_ID = os.environ.get("TIKTOK_PIXEL_ID", "")
+TIKTOK_EVENTS_TOKEN = os.environ.get("TIKTOK_EVENTS_TOKEN", "")
+PURCHASE_VALUE = float(os.environ.get("PURCHASE_VALUE", "25"))
+PURCHASE_CURRENCY = os.environ.get("PURCHASE_CURRENCY", "USD")
 
 JWT_SECRET = os.environ.get("JWT_SECRET", "change-me-in-production")
 JWT_ALGORITHM = "HS256"
@@ -716,6 +729,113 @@ async def get_checkout_session(session_id: str = ""):
         email = session["customer_email"]
 
     return {"email": (email or "").strip().lower()}
+
+
+# ── Server-side ad tracking ────────────────────────────────────────────────────
+
+
+def _hash_email(email: str) -> Optional[str]:
+    email = (email or "").strip().lower()
+    if not email:
+        return None
+    return hashlib.sha256(email.encode()).hexdigest()
+
+
+async def send_meta_purchase(email: str, value: float, currency: str, event_id: str):
+    """Send a Purchase event to the Meta Conversions API (no-op if unconfigured)."""
+    if not (META_PIXEL_ID and META_CAPI_TOKEN):
+        return
+    user_data = {}
+    hashed = _hash_email(email)
+    if hashed:
+        user_data["em"] = [hashed]
+    payload = {
+        "data": [
+            {
+                "event_name": "Purchase",
+                "event_time": int(time.time()),
+                "event_id": event_id,
+                "action_source": "website",
+                "event_source_url": f"{LANDING_URL}/download.html",
+                "user_data": user_data,
+                "custom_data": {"value": value, "currency": currency},
+            }
+        ]
+    }
+    url = (
+        f"https://graph.facebook.com/{META_GRAPH_VERSION}/"
+        f"{META_PIXEL_ID}/events?access_token={META_CAPI_TOKEN}"
+    )
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(url, json=payload)
+        if resp.status_code >= 400:
+            print(f"[meta-capi] {resp.status_code} {resp.text}")
+
+
+async def send_tiktok_purchase(email: str, value: float, currency: str, event_id: str):
+    """Send a CompletePayment event to the TikTok Events API (no-op if unconfigured)."""
+    if not (TIKTOK_PIXEL_ID and TIKTOK_EVENTS_TOKEN):
+        return
+    user = {}
+    hashed = _hash_email(email)
+    if hashed:
+        user["email"] = hashed
+    payload = {
+        "event_source": "web",
+        "event_source_id": TIKTOK_PIXEL_ID,
+        "data": [
+            {
+                "event": "CompletePayment",
+                "event_time": int(time.time()),
+                "event_id": event_id,
+                "user": user,
+                "properties": {"value": value, "currency": currency},
+                "page": {"url": f"{LANDING_URL}/download.html"},
+            }
+        ],
+    }
+    headers = {"Access-Token": TIKTOK_EVENTS_TOKEN, "Content-Type": "application/json"}
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(
+            "https://business-api.tiktok.com/open_api/v1.3/event/track/",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code >= 400:
+            print(f"[tiktok-events] {resp.status_code} {resp.text}")
+
+
+@app.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    """Stripe webhook. On checkout.session.completed, forward a Purchase event to
+    Meta (Conversions API) and TikTok (Events API) for reliable ad attribution."""
+    payload = await request.body()
+    sig = request.headers.get("stripe-signature", "")
+
+    if STRIPE_WEBHOOK_SECRET:
+        try:
+            event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid payload")
+        except stripe.SignatureVerificationError:
+            raise HTTPException(status_code=400, detail="Invalid signature")
+    else:
+        # No secret configured (e.g. local/dev) — parse without verification.
+        try:
+            event = json.loads(payload)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid payload")
+
+    if event.get("type") == "checkout.session.completed":
+        session = event["data"]["object"]
+        cd = session.get("customer_details") or {}
+        email = cd.get("email") or session.get("customer_email") or ""
+        # Deterministic event_id shared with the browser pixel for de-duplication.
+        event_id = "Purchase." + (session.get("id") or "")
+        await send_meta_purchase(email, PURCHASE_VALUE, PURCHASE_CURRENCY, event_id)
+        await send_tiktok_purchase(email, PURCHASE_VALUE, PURCHASE_CURRENCY, event_id)
+
+    return {"received": True}
 
 
 @app.get("/health")

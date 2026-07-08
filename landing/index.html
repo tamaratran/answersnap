@@ -40,6 +40,9 @@
     gtag('js', new Date());
     gtag('config', 'G-CF2V24H2RE');
   </script>
+
+  <!-- Meta Pixel + TikTok Pixel -->
+  <script defer src="tracking.js"></script>
 </head>
 <body class="has-sticky-cta">
   <!-- Nav -->
@@ -469,6 +472,7 @@
         else if (link.closest('.sticky-cta-bar')) location = 'sticky_bar';
         link.addEventListener('click', function() {
           gtag('event', 'click_get_started', { cta_location: location });
+          if (window.cheatlyTrack) window.cheatlyTrack.initiateCheckout();
         });
       });
     });

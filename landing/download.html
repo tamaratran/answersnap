@@ -21,6 +21,9 @@
     gtag('js', new Date());
     gtag('config', 'G-CF2V24H2RE');
   </script>
+
+  <!-- Meta Pixel + TikTok Pixel -->
+  <script defer src="tracking.js"></script>
 </head>
 <body>
   <!-- Nav -->
@@ -216,6 +219,19 @@
         }
       });
     })();
+  </script>
+
+  <!-- Fire Purchase once per completed checkout (guarded against refresh) -->
+  <script>
+    window.addEventListener("DOMContentLoaded", function () {
+      var sessionId = new URLSearchParams(window.location.search).get("session_id");
+      if (!sessionId || !window.cheatlyTrack) return;
+      var key = "cheatly_purchase_" + sessionId;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+      // Deterministic event_id (matches the backend Purchase event) for de-dup.
+      window.cheatlyTrack.purchase(undefined, undefined, "Purchase." + sessionId);
+    });
   </script>
 </body>
 </html>
