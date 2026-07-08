@@ -1,0 +1,1 @@
+<file:/home/ubuntu/repos/answersnap/.agents/skills/testing-chrome-extension/SKILL.md>
