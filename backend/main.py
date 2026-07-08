@@ -159,9 +159,28 @@ async def locate_answer(req: LocateRequest):
     if circles is not None:
         all_circles = np.uint16(np.around(circles[0]))
 
+        # Keep only circles that look like radio buttons rather than letter
+        # glyphs (e.g. the "o" in "option"): a radio sits at the start of a
+        # label, so the strip immediately to its left is uniform background,
+        # while a glyph has neighboring letters there.
+        h, w = gray.shape
+        radio_circles = []
+        for cx, cy, cr in all_circles:
+            cx, cy, cr = int(cx), int(cy), int(cr)
+            x0 = max(0, cx - 4 * cr)
+            x1 = max(0, cx - 2 * cr)
+            y0 = max(0, cy - cr)
+            y1 = min(h, cy + cr)
+            if x1 <= x0 or y1 <= y0:
+                continue
+            left_strip = gray[y0:y1, x0:x1]
+            if left_strip.size == 0 or left_strip.std() > 12:
+                continue
+            radio_circles.append((cx, cy, cr))
+
         # Find vertical groups of circles (same x ± 10px, consistent spacing)
         x_groups = {}
-        for cx, cy, cr in all_circles:
+        for cx, cy, cr in radio_circles:
             bucket = int(cx) // 10 * 10
             if bucket not in x_groups:
                 x_groups[bucket] = []
@@ -184,30 +203,31 @@ async def locate_answer(req: LocateRequest):
             if len(merged) < 3:
                 continue
 
-            # Sort by y and check for consistent spacing
+            # Sort by y and check if circles have similar radius
             merged.sort(key=lambda c: c[1])
-            # Check if circles have similar radius
             radii = [c[2] for c in merged]
             if max(radii) - min(radii) > 5:
                 continue
 
-            # Check consistent vertical spacing
-            spacings = [merged[k+1][1] - merged[k][1] for k in range(len(merged)-1)]
-            if not spacings:
-                continue
-            avg_spacing = sum(spacings) / len(spacings)
-            if avg_spacing < 20 or avg_spacing > 80:
-                continue
-            # All spacings should be within 30% of average
-            consistent = all(abs(s - avg_spacing) / avg_spacing < 0.3 for s in spacings)
-            if not consistent:
-                continue
+            # Find the best contiguous run of 3+ circles with consistent
+            # vertical spacing, so a stray circle above or below the real
+            # option list doesn't disqualify the whole column.
+            for start in range(len(merged) - 2):
+                for end in range(len(merged), start + 2, -1):
+                    run = merged[start:end]
+                    spacings = [run[k+1][1] - run[k][1] for k in range(len(run)-1)]
+                    avg_spacing = sum(spacings) / len(spacings)
+                    if avg_spacing < 20 or avg_spacing > 80:
+                        continue
+                    # All spacings should be within 30% of average
+                    if not all(abs(s - avg_spacing) / avg_spacing < 0.3 for s in spacings):
+                        continue
 
-            # Score: more circles in group = better; consistent spacing = better
-            score = len(merged) * 10 - max(abs(s - avg_spacing) for s in spacings)
-            if score > best_score:
-                best_score = score
-                best_group = merged
+                    # Score: more circles = better; consistent spacing = better
+                    score = len(run) * 10 - max(abs(s - avg_spacing) for s in spacings)
+                    if score > best_score:
+                        best_score = score
+                        best_group = run
 
         if best_group:
             # Extract target option index from answer letter
