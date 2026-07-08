@@ -7,16 +7,22 @@
 
 const BACKEND_URL = process.env.CHEATLY_BACKEND_URL || "https://answersnap-backend.fly.dev";
 
-async function queryBackend(screenshotDataUrl) {
+async function queryBackend(screenshotDataUrl, selectedText = "", clickX = -1, clickY = -1) {
+  const body = {
+    screenshot: screenshotDataUrl,
+    selectedText,
+  };
+  if (clickX >= 0 && clickY >= 0) {
+    body.clickX = clickX;
+    body.clickY = clickY;
+  }
+
   const response = await fetch(`${BACKEND_URL}/answer`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      screenshot: screenshotDataUrl,
-      selectedText: "", // Desktop app has no click context
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -31,26 +37,38 @@ async function queryBackend(screenshotDataUrl) {
   }
 
   const data = await response.json();
-  return data.answer || "No answer returned.";
+  return {
+    answer: data.answer || "No answer returned.",
+    optionIndex: data.optionIndex || 0,
+  };
 }
 
 /**
  * Ask the backend to locate where to click for an MC answer.
  * Returns {x, y, confidence} or null on failure.
  */
-async function locateAnswer(screenshotDataUrl, answer, screenWidth, screenHeight) {
+async function locateAnswer(screenshotDataUrl, answer, screenWidth, screenHeight, optionIndex = 0, clickX = -1, clickY = -1) {
   try {
+    const body = {
+      screenshot: screenshotDataUrl,
+      answer,
+      screenWidth,
+      screenHeight,
+    };
+    if (optionIndex > 0) {
+      body.optionIndex = optionIndex;
+    }
+    if (clickX >= 0 && clickY >= 0) {
+      body.clickX = clickX;
+      body.clickY = clickY;
+    }
+
     const response = await fetch(`${BACKEND_URL}/locate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        screenshot: screenshotDataUrl,
-        answer,
-        screenWidth,
-        screenHeight,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) return null;
