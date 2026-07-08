@@ -1,4 +1,4 @@
-app = "answersnap-backend"
+app = "cheatly-backend"
 primary_region = "sjc"
 
 [build]

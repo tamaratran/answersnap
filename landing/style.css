@@ -1,5 +1,9 @@
 /* Cheatly — Landing Page Styles (Light Mode Redesign) */
 
+[hidden] {
+  display: none !important;
+}
+
 :root {
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
@@ -968,6 +972,53 @@ h2 {
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.25);
   border-radius: 10px;
+}
+
+.cancel-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.cancel-modal[hidden] {
+  display: none;
+}
+
+.cancel-modal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.cancel-modal-card h3 {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+
+.cancel-modal-card p {
+  color: var(--text-secondary);
+  font-size: 15px;
+  margin: 0 0 20px;
+}
+
+.cancel-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.cancel-modal-actions .btn {
+  flex: 1;
 }
 
 .install-step {
