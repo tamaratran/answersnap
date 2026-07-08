@@ -1,5 +1,9 @@
+import base64
 import os
+import re
 
+import cv2
+import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -28,10 +32,13 @@ STRIPE_CHECKOUT_URL = "https://api.stripe.com/v1/checkout/sessions"
 class AnswerRequest(BaseModel):
     screenshot: str
     selectedText: str = ""
+    clickX: int = -1
+    clickY: int = -1
 
 
 class AnswerResponse(BaseModel):
     answer: str
+    optionIndex: int = 0
 
 
 class LocateRequest(BaseModel):
@@ -39,6 +46,9 @@ class LocateRequest(BaseModel):
     answer: str
     screenWidth: int
     screenHeight: int
+    optionIndex: int = 0
+    clickX: int = -1
+    clickY: int = -1
 
 
 class LocateResponse(BaseModel):
@@ -47,28 +57,70 @@ class LocateResponse(BaseModel):
     confidence: str = "medium"
 
 
-def build_prompt(selected_text: str) -> str:
-    context_hint = ""
+def build_prompt(selected_text: str, click_x: int = -1, click_y: int = -1) -> str:
+    hints = []
     if selected_text:
-        context_hint = f'The user double-clicked near this text: "{selected_text}"\n\n'
+        hints.append(f'The user double-clicked near this text: "{selected_text}"')
+    if click_x >= 0 and click_y >= 0:
+        hints.append(f"A cropped screenshot centered on the double-click at ({click_x}, {click_y}) is shown.")
+
+    context_hint = ""
+    if hints:
+        context_hint = "\n\n".join(hints) + "\n\n"
 
     return (
         f"{context_hint}You are an expert tutor. Look at this screenshot of a "
         "question (exam, quiz, homework, etc.).\n\n"
         "Your job:\n"
-        "1. Identify the SINGLE question closest to where the user double-clicked.\n"
+        "1. Identify the SINGLE question visible in the screenshot.\n"
         "2. Determine the correct answer for ONLY that one question.\n"
         "3. Return ONLY the answer in a concise format.\n\n"
         "Rules:\n"
-        '- For multiple choice: return the letter and brief text, e.g. "C. 2x + 2"\n'
-        '- For multiple select: return all correct letters, e.g. "A, C"\n'
+        '- For multiple choice: return the correct answer text followed by "(option N)" '
+        "where N is the position of the correct option counting from the top "
+        '(1 for the first/topmost option, 2 for the next, etc.). Example: "9x^8 (option 2)".\n'
+        '- For multiple select: return all correct options, e.g. "A, C"\n'
         "- For fill-in-the-blank: return just the answer value\n"
         "- For short answer / essay: provide a concise but complete answer\n"
-        "- Answer ONLY ONE question \u2014 the one nearest to the user's click.\n"
+        "- Answer ONLY ONE question.\n"
+        "- Be careful with derivative rules: x^n and a^x are different. "
+        "For x^n, the derivative is n*x^(n-1). For a^x, the derivative is a^x*ln(a). "
+        "A constant number like 5^9 has derivative 0.\n"
         "- Be direct. No preamble or explanation unless the question asks for it.\n"
         '- If you cannot determine the answer with confidence, say "Uncertain: " '
         "followed by your best guess."
     )
+
+
+def crop_screenshot(data_url: str, click_x: int, click_y: int) -> str:
+    """Crop the screenshot around the double-click to focus on one question."""
+    img_data = data_url
+    if img_data.startswith("data:"):
+        img_data = img_data.split(",", 1)[1]
+
+    img_bytes = base64.b64decode(img_data)
+    img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+    img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+    if img is None:
+        return data_url
+
+    h, w = img.shape[:2]
+    CROP_WIDTH = 700
+    CROP_HEIGHT = 300
+    ABOVE = 80  # pixels to keep above the click so the full question text fits
+
+    x1 = max(0, min(click_x - CROP_WIDTH // 2, w - CROP_WIDTH))
+    y1 = max(0, min(click_y - ABOVE, h - CROP_HEIGHT))
+    x2 = min(w, x1 + CROP_WIDTH)
+    y2 = min(h, y1 + CROP_HEIGHT)
+
+    crop = img[y1:y2, x1:x2]
+    ok, buf = cv2.imencode(".png", crop)
+    if not ok:
+        return data_url
+
+    b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
+    return f"data:image/png;base64,{b64}"
 
 
 @app.post("/answer", response_model=AnswerResponse)
@@ -76,12 +128,16 @@ async def get_answer(req: AnswerRequest):
     if not OPENAI_API_KEY:
         raise HTTPException(status_code=500, detail="API key not configured")
 
-    prompt = build_prompt(req.selectedText)
+    prompt = build_prompt(req.selectedText, req.clickX, req.clickY)
 
     # Build image content from screenshot
     screenshot_data = req.screenshot
     if not screenshot_data.startswith("data:"):
         screenshot_data = f"data:image/png;base64,{screenshot_data}"
+
+    # Crop around the double-click to focus on one question and its options
+    if req.clickX >= 0 and req.clickY >= 0:
+        screenshot_data = crop_screenshot(screenshot_data, req.clickX, req.clickY)
 
     payload = {
         "model": OPENAI_MODEL,
@@ -120,7 +176,31 @@ async def get_answer(req: AnswerRequest):
     data = resp.json()
     answer = data["choices"][0]["message"]["content"].strip()
 
-    return AnswerResponse(answer=answer)
+    # Parse out a "(option N)" hint that helps the desktop app click the right radio button.
+    option_index = 0
+    match = re.search(r"\(option\s+(\d+)\)", answer, re.IGNORECASE)
+    if match:
+        option_index = int(match.group(1))
+        # Remove the marker from the user-facing answer text.
+        answer = re.sub(r"\(option\s+\d+\)", "", answer, flags=re.IGNORECASE).strip()
+    # Strip surrounding quotes if the model wrapped the answer in them.
+    if len(answer) >= 2 and (
+        (answer[0] == '"' and answer[-1] == '"')
+        or (answer[0] == "'" and answer[-1] == "'")
+    ):
+        answer = answer[1:-1].strip()
+
+    return AnswerResponse(answer=answer, optionIndex=option_index)
+
+
+def group_distance_to_click(group, click_y: int) -> float:
+    """Score a circle group by how close it is vertically to the user's click."""
+    if not group or click_y < 0:
+        return float("inf")
+    # The question text is just above the first option, so the best group is the
+    # one whose top is slightly below the click.
+    top_y = group[0][1]
+    return abs(top_y - click_y - 50)
 
 
 @app.post("/locate", response_model=LocateResponse)
@@ -223,25 +303,38 @@ async def locate_answer(req: LocateRequest):
                     if not all(abs(s - avg_spacing) / avg_spacing < 0.3 for s in spacings):
                         continue
 
-                    # Score: more circles = better; consistent spacing = better
+                    # Score: more circles = better; consistent spacing = better,
+                    # and the group should be vertically near the user's click.
                     score = len(run) * 10 - max(abs(s - avg_spacing) for s in spacings)
+                    if req.clickY >= 0:
+                        dist = group_distance_to_click(run, req.clickY)
+                        score -= dist * 0.5
                     if score > best_score:
                         best_score = score
                         best_group = run
 
         if best_group:
-            # Extract target option index from answer letter
-            target_letter = req.answer.strip()[0].upper()
-            target_idx = ord(target_letter) - ord('A')
-
-            if 0 <= target_idx < len(best_group):
-                x = best_group[target_idx][0]
-                y = best_group[target_idx][1]
+            # If the model provided an option index, use it directly. This is much
+            # more reliable than guessing from the first letter of the answer text,
+            # especially when options are unlabeled (e.g., Google Forms).
+            if req.optionIndex > 0 and req.optionIndex <= len(best_group):
+                idx = req.optionIndex - 1
+                x = best_group[idx][0]
+                y = best_group[idx][1]
                 confidence = "high"
             else:
-                x = best_group[0][0]
-                y = best_group[0][1]
-                confidence = "medium"
+                # Fallback: try to infer the index from a leading A-E letter.
+                target_letter = req.answer.strip()[0].upper()
+                target_idx = ord(target_letter) - ord('A')
+
+                if 0 <= target_idx < len(best_group):
+                    x = best_group[target_idx][0]
+                    y = best_group[target_idx][1]
+                    confidence = "high"
+                else:
+                    x = best_group[0][0]
+                    y = best_group[0][1]
+                    confidence = "medium"
 
     if x is None or y is None:
         # Fallback: if circle detection fails, return error

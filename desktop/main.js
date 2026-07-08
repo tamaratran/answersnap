@@ -42,13 +42,14 @@ function createOverlayWindow() {
   overlayWindow = new BrowserWindow({
     width: 380,
     height: 260,
-    x: screenWidth - 400, // Bottom-right corner
+    x: screenWidth - 400, // Bottom-right corner (never shown by default)
     y: 20,
+    show: false, // Never show the window on launch
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    focusable: true,
+    focusable: false,
     resizable: true,
     hasShadow: false,
     webPreferences: {
@@ -61,10 +62,8 @@ function createOverlayWindow() {
   // THE KEY LINE — makes window invisible to all screen capture/recording
   overlayWindow.setContentProtection(true);
 
-  // Don't appear in Alt+Tab
+  // Don't appear in Alt+Tab and keep hidden at all times
   overlayWindow.setSkipTaskbar(true);
-
-  // Start hidden
   overlayWindow.hide();
 
   // Prevent the window from being closed, just hide it
@@ -86,24 +85,10 @@ function registerHotkeys() {
     await captureAndAnswer();
   });
 
-  // Toggle overlay visibility
-  globalShortcut.register("CommandOrControl+Shift+H", () => {
-    if (overlayWindow.isVisible()) {
-      overlayWindow.hide();
-    } else {
-      overlayWindow.show();
-    }
-  });
-
-  // Emergency hide — instant vanish
-  globalShortcut.register("CommandOrControl+Shift+E", () => {
-    overlayWindow.hide();
-  });
-
-  // Type the last answer into focused field
+  // Type the last answer into focused field (overlay stays hidden)
   globalShortcut.register("CommandOrControl+Shift+T", async () => {
     if (!lastAnswer) return;
-    // Hide overlay so it doesn't interfere, wait a moment for focus
+    // Keep overlay hidden so it doesn't interfere
     overlayWindow.hide();
     await new Promise((r) => setTimeout(r, 200));
     const result = await typeAnswer(lastAnswer);
@@ -111,17 +96,20 @@ function registerHotkeys() {
       type: "typed",
       method: result.method,
     });
-    overlayWindow.show();
   });
 
   // Toggle double-click-to-answer mode
   globalShortcut.register("CommandOrControl+Shift+D", () => {
     doubleClickEnabled = !doubleClickEnabled;
-    overlayWindow.show();
     overlayWindow.webContents.send("state", {
       type: "mode",
       doubleClick: doubleClickEnabled,
     });
+  });
+
+  // Emergency hide / re-hide overlay (overlay is never shown, but keep this for safety)
+  globalShortcut.register("CommandOrControl+Shift+E", () => {
+    overlayWindow.hide();
   });
 
   // Quit the app entirely
@@ -154,8 +142,8 @@ function shouldIgnoreClick(pos) {
 }
 
 function registerDoubleClick() {
-  const ok = startDoubleClickListener(() => {
-    captureAndAnswer();
+  const ok = startDoubleClickListener((pos) => {
+    captureAndAnswer(pos);
   }, shouldIgnoreClick);
   if (!ok) {
     console.error("Global double-click listener unavailable — use Ctrl+Shift+A instead.");
@@ -164,7 +152,9 @@ function registerDoubleClick() {
 
 // ── Core Logic ───────────────────────────────────────────────────────────────
 
-async function captureAndAnswer() {
+async function captureAndAnswer({ x = -1, y = -1 } = {}) {
+  const clickX = x;
+  const clickY = y;
   if (isQuerying) return; // Prevent double-trigger
   isQuerying = true;
 
@@ -175,30 +165,25 @@ async function captureAndAnswer() {
     // user double-click.
     setSuppressed(true);
 
-    // Hide overlay during capture to prevent it from appearing in screenshot
-    // (content protection only works on Windows/macOS, not Linux)
+    // Keep the overlay hidden during capture so it never appears on screen.
     overlayWindow.hide();
     await new Promise((r) => setTimeout(r, 100));
 
     // Capture the screen
     screenshotBase64 = await captureScreen();
 
-    // Now show overlay with loading state
-    overlayWindow.show();
-    overlayWindow.webContents.send("state", { type: "loading" });
-
-    // Send to backend
-    const answer = await queryBackend(screenshotBase64);
+    // Send to backend, including click coordinates when available
+    const { answer, optionIndex } = await queryBackend(screenshotBase64, "", clickX, clickY);
 
     // Store the answer and auto-copy to clipboard
     lastAnswer = answer;
     copyToClipboard(answer);
 
-    // Display the answer
+    // Keep the overlay hidden; just update its state for debugging
     overlayWindow.webContents.send("state", { type: "answer", answer, copied: true });
 
     // ── Auto-fill the answer ───────────────────────────────────────────────
-    await autoFillAnswer(answer, screenshotBase64);
+    await autoFillAnswer(answer, optionIndex, screenshotBase64, clickX, clickY);
   } catch (err) {
     overlayWindow.webContents.send("state", {
       type: "error",
@@ -215,9 +200,9 @@ async function captureAndAnswer() {
  * - For MC answers: use CV-based radio button detection to click exact position
  * - For text answers: type into the focused field
  */
-async function autoFillAnswer(answer, screenshotBase64) {
+async function autoFillAnswer(answer, optionIndex, screenshotBase64, clickX = -1, clickY = -1) {
   try {
-    if (isMCAnswer(answer)) {
+    if (optionIndex > 0 || isMCAnswer(answer)) {
       // Multiple choice — locate and click the correct option
       const cleanAnswer = stripQuotes(answer);
       overlayWindow.webContents.send("state", {
@@ -230,19 +215,16 @@ async function autoFillAnswer(answer, screenshotBase64) {
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width, height } = primaryDisplay.size;
 
-      const coords = await locateAnswer(screenshotBase64, cleanAnswer, width, height);
-      console.log(`[LOCATE] Screen: ${width}x${height}, Answer: "${cleanAnswer}", Coords:`, coords);
+      const coords = await locateAnswer(screenshotBase64, cleanAnswer, width, height, optionIndex, clickX, clickY);
+      console.log(`[LOCATE] Screen: ${width}x${height}, Answer: "${cleanAnswer}", OptionIndex: ${optionIndex}, Coords:`, coords);
       if (coords && coords.x && coords.y) {
-        // Hide overlay so it doesn't intercept the click
+        // Keep overlay hidden so it doesn't intercept the click and remains invisible
         overlayWindow.hide();
         await new Promise((r) => setTimeout(r, 150));
 
         // Click the exact radio button position (detected by computer vision)
         const clicked = await clickAtPosition(coords.x, coords.y);
 
-        // Show overlay again with result
-        await new Promise((r) => setTimeout(r, 300));
-        overlayWindow.show();
         overlayWindow.webContents.send("state", {
           type: "answer",
           answer,
@@ -265,7 +247,6 @@ async function autoFillAnswer(answer, screenshotBase64) {
       const result = await typeAnswer(answer);
 
       await new Promise((r) => setTimeout(r, 200));
-      overlayWindow.show();
       overlayWindow.webContents.send("state", {
         type: "answer",
         answer,
