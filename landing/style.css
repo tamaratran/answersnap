@@ -1,5 +1,9 @@
 /* Cheatly — Landing Page Styles (Light Mode Redesign) */
 
+[hidden] {
+  display: none !important;
+}
+
 :root {
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
