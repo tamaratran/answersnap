@@ -913,8 +913,61 @@ h2 {
 
 .install-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 24px;
+}
+
+/* Account creation form (post-payment) */
+.account-form {
+  max-width: 380px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.account-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 14px 0 6px;
+}
+
+.account-input {
+  width: 100%;
+  padding: 13px 16px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  outline: none;
+}
+
+.account-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.account-input[readonly] {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.account-form .download-btn {
+  width: 100%;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.account-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 10px;
 }
 
 .install-step {

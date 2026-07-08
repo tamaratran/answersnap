@@ -278,8 +278,12 @@ async def register(req: AuthRequest):
     stripe_customer_id = None
     if STRIPE_SECRET_KEY:
         try:
-            customer = stripe.Customer.create(email=email)
-            stripe_customer_id = customer.id
+            existing = stripe.Customer.list(email=email, limit=1)
+            if existing.data:
+                stripe_customer_id = existing.data[0].id
+            else:
+                customer = stripe.Customer.create(email=email)
+                stripe_customer_id = customer.id
         except stripe.StripeError as e:
             raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
 
@@ -649,7 +653,7 @@ async def create_checkout(email: str = ""):
         "mode": "subscription",
         "line_items[0][price]": STRIPE_PRICE_ID,
         "line_items[0][quantity]": "1",
-        "success_url": f"{LANDING_URL}/download.html",
+        "success_url": f"{LANDING_URL}/download.html?session_id={{CHECKOUT_SESSION_ID}}",
         "cancel_url": f"{LANDING_URL}/?checkout=cancelled",
         "allow_promotion_codes": "true",
         "subscription_data[trial_period_days]": "7",
@@ -686,6 +690,32 @@ async def create_checkout(email: str = ""):
         raise HTTPException(status_code=resp.status_code, detail=detail)
 
     return RedirectResponse(resp.json()["url"], status_code=303)
+
+
+@app.get("/checkout/session")
+async def get_checkout_session(session_id: str = ""):
+    """Return the email associated with a completed Stripe Checkout Session.
+
+    Used by the post-payment page to pre-fill the account-creation form so the
+    account is linked to the same email (and Stripe customer) that just paid.
+    """
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id required")
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except stripe.StripeError:
+        raise HTTPException(status_code=404, detail="Checkout session not found")
+
+    email = ""
+    if session.get("customer_details") and session["customer_details"].get("email"):
+        email = session["customer_details"]["email"]
+    elif session.get("customer_email"):
+        email = session["customer_email"]
+
+    return {"email": (email or "").strip().lower()}
 
 
 @app.get("/health")

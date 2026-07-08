@@ -37,15 +37,29 @@
   <section class="download-hero">
     <div class="container">
       <div class="download-card">
-        <div class="download-badge">You're In</div>
-        <h1>Install Cheatly</h1>
-        <p class="download-subtitle">Add the extension to Chrome and start getting instant answers.</p>
+        <div class="download-badge">Payment Confirmed</div>
+        <h1>Create Your Account</h1>
+        <p class="download-subtitle">Set a password to finish setting up. You'll use this to sign in to the extension.</p>
 
-        <a href="https://chromewebstore.google.com/detail/pgljbingjokidaklhfhndnfofldajafh" target="_blank" rel="noopener" class="btn btn-primary btn-large download-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
-          Add to Chrome — It's Free
-        </a>
-        <p class="download-file-info">Chrome Web Store &middot; Free with your subscription</p>
+        <form id="account-form" class="account-form" autocomplete="on">
+          <label class="account-label" for="account-email">Email</label>
+          <input id="account-email" name="email" type="email" class="account-input" placeholder="you@example.com" autocomplete="email" required />
+          <label class="account-label" for="account-password">Create a password</label>
+          <input id="account-password" name="password" type="password" class="account-input" placeholder="At least 6 characters" autocomplete="new-password" minlength="6" required />
+          <div id="account-error" class="account-error" hidden></div>
+          <button type="submit" id="account-submit" class="btn btn-primary btn-large download-btn">Create Account</button>
+        </form>
+
+        <div id="account-success" hidden>
+          <div class="download-badge">Account Created</div>
+          <h2 style="margin:12px 0 4px">You're all set</h2>
+          <p class="download-subtitle" id="account-success-msg">Now add the extension and sign in with this account.</p>
+          <a href="https://chromewebstore.google.com/detail/pgljbingjokidaklhfhndnfofldajafh" target="_blank" rel="noopener" class="btn btn-primary btn-large download-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
+            Add to Chrome — It's Free
+          </a>
+          <p class="download-file-info">Chrome Web Store &middot; Free with your subscription</p>
+        </div>
       </div>
     </div>
   </section>
@@ -77,6 +91,15 @@
 
         <div class="install-step">
           <div class="install-step-number">3</div>
+          <h3>Sign In</h3>
+          <p>Open the Cheatly popup and <strong>sign in with the account you just created above</strong>. This unlocks the extension with your subscription.</p>
+          <div class="install-tip">
+            Use the same email &amp; password you set on this page.
+          </div>
+        </div>
+
+        <div class="install-step">
+          <div class="install-step-number">4</div>
           <h3>Start Answering</h3>
           <p>Navigate to any quiz or assignment. <strong>Double-click</strong> a question and Cheatly will instantly find and select the answer.</p>
           <div class="install-tip">
@@ -120,5 +143,79 @@
     </div>
   </footer>
   <script defer src="/_vercel/insights/script.js"></script>
+  <script>
+    (function () {
+      const BACKEND_URL = "https://cheatly-backend.fly.dev";
+      const form = document.getElementById("account-form");
+      const emailInput = document.getElementById("account-email");
+      const passwordInput = document.getElementById("account-password");
+      const errorBox = document.getElementById("account-error");
+      const submitBtn = document.getElementById("account-submit");
+      const successBox = document.getElementById("account-success");
+      const successMsg = document.getElementById("account-success-msg");
+
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get("session_id");
+
+      // Pre-fill the email from the completed Stripe Checkout session.
+      if (sessionId) {
+        fetch(BACKEND_URL + "/checkout/session?session_id=" + encodeURIComponent(sessionId))
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data && data.email) {
+              emailInput.value = data.email;
+              emailInput.readOnly = true;
+            }
+          })
+          .catch(() => {});
+      }
+
+      function showError(msg) {
+        errorBox.textContent = msg;
+        errorBox.hidden = false;
+      }
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        errorBox.hidden = true;
+        const email = emailInput.value.trim().toLowerCase();
+        const password = passwordInput.value;
+        if (!email || password.length < 6) {
+          showError("Enter your email and a password of at least 6 characters.");
+          return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Creating account…";
+        try {
+          const resp = await fetch(BACKEND_URL + "/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+          if (resp.status === 409) {
+            showError("This email already has an account. Just sign in with it in the extension.");
+            form.hidden = true;
+            successMsg.textContent = "Add the extension and sign in with " + email + ".";
+            successBox.hidden = false;
+            return;
+          }
+          if (!resp.ok) {
+            let detail = "Something went wrong. Please try again.";
+            try { const j = await resp.json(); if (j && j.detail) detail = j.detail; } catch (_) {}
+            showError(detail);
+            return;
+          }
+          form.hidden = true;
+          successMsg.textContent = "Add the extension and sign in with " + email + ".";
+          successBox.hidden = false;
+        } catch (err) {
+          showError("Network error. Please try again.");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Create Account";
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
