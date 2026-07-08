@@ -247,6 +247,28 @@ async def start_usage_session(email: str):
         await db.close()
 
 
+def _subscription_period_end(sub) -> str:
+    """Return the current period end as ISO string.
+
+    Newer Stripe API versions expose `current_period_end` on the subscription
+    item rather than the subscription itself, so read the item first and fall
+    back to the top-level field for older versions.
+    """
+    ts = None
+    try:
+        ts = sub["items"]["data"][0]["current_period_end"]
+    except (KeyError, IndexError, TypeError):
+        ts = None
+    if ts is None:
+        try:
+            ts = sub["current_period_end"]
+        except (KeyError, TypeError):
+            ts = None
+    if not ts:
+        return ""
+    return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+
+
 async def check_stripe_subscription(stripe_customer_id: str) -> dict:
     if not stripe_customer_id or not STRIPE_SECRET_KEY:
         return {"subscribed": False, "trial": False, "plan": "", "current_period_end": ""}
@@ -256,7 +278,7 @@ async def check_stripe_subscription(stripe_customer_id: str) -> dict:
         for sub in subs.data:
             if sub.status in ("active", "trialing"):
                 is_trial = sub.status == "trialing"
-                period_end = datetime.fromtimestamp(sub.current_period_end, tz=timezone.utc).isoformat()
+                period_end = _subscription_period_end(sub)
                 plan_name = ""
                 if sub.items.data:
                     price = sub.items.data[0].price
