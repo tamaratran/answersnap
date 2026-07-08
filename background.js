@@ -8,10 +8,10 @@
  * 4. Message routing between content script and popup
  */
 
-const BACKEND_URL = "https://answersnap-backend.fly.dev";
+const BACKEND_URL = "https://cheatly-backend.fly.dev";
 
 const AUTO_DISABLE_ALARM = "auto-disable";
-const AUTO_DISABLE_MINUTES = 120; // 2 hours
+const AUTO_DISABLE_MINUTES = 60; // 1 hour
 
 const DEFAULT_SETTINGS = {
   enabled: true,
@@ -62,6 +62,9 @@ async function queryBackend(screenshotDataUrl, selectedText) {
   }
   if (response.status === 403) {
     throw new Error("SUBSCRIPTION_REQUIRED");
+  }
+  if (response.status === 429) {
+    throw new Error("RATE_LIMITED");
   }
 
   if (!response.ok) {
@@ -124,10 +127,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === "SAVE_SETTINGS") {
-    chrome.storage.local.set({ settings: message.settings }).then(() => {
+    chrome.storage.local.set({ settings: message.settings }).then(async () => {
       // Manage auto-disable timer on settings change from popup
       if (message.settings.enabled) {
         startAutoDisableTimer();
+        // Reset server-side session when user re-enables
+        await resetServerSession();
       } else {
         clearAutoDisableTimer();
       }
@@ -136,6 +141,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 });
+
+// ── Server Session Reset ────────────────────────────────────────────────────
+
+async function resetServerSession() {
+  const token = await getAuthToken();
+  if (!token) return;
+  try {
+    await fetch(`${BACKEND_URL}/auth/reset-session`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (_err) {
+    // Non-critical — server will start a new session on next /answer call
+  }
+}
 
 // ── Auto-Disable Timer ──────────────────────────────────────────────────────
 
@@ -190,6 +210,7 @@ chrome.commands.onCommand.addListener(async (command) => {
     // Manage auto-disable timer
     if (settings.enabled) {
       startAutoDisableTimer();
+      resetServerSession();
     } else {
       clearAutoDisableTimer();
     }

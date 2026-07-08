@@ -4,7 +4,7 @@
  * Manages auth state and extension settings.
  */
 
-const BACKEND_URL = "https://answersnap-backend.fly.dev";
+const BACKEND_URL = "https://cheatly-backend.fly.dev";
 
 const authView = document.getElementById("auth-view");
 const mainView = document.getElementById("main-view");
@@ -23,6 +23,7 @@ const userEmailEl = document.getElementById("user-email");
 const subBadge = document.getElementById("sub-badge");
 const subDetail = document.getElementById("sub-detail");
 const subscribeCta = document.getElementById("subscribe-cta");
+const subscribeLink = document.getElementById("subscribe-link");
 const settingsSection = document.getElementById("settings-section");
 
 let currentMode = "homework";
@@ -139,7 +140,13 @@ function showMainView(email, subInfo) {
     const cls = subInfo.trial ? "trial" : "active";
     subBadge.textContent = label;
     subBadge.className = `sub-badge ${cls}`;
-    subDetail.textContent = subInfo.plan || "";
+    if (subInfo.rate_limited) {
+      subDetail.textContent = "Session expired — toggle off and on to reset";
+    } else if (subInfo.session_minutes_remaining >= 0 && subInfo.session_minutes_remaining < 60) {
+      subDetail.textContent = `${subInfo.session_minutes_remaining} min remaining`;
+    } else {
+      subDetail.textContent = subInfo.plan || "";
+    }
     subscribeCta.classList.add("hidden");
     settingsSection.classList.remove("hidden");
   } else {
@@ -147,6 +154,7 @@ function showMainView(email, subInfo) {
     subBadge.className = "sub-badge inactive";
     subDetail.textContent = "";
     subscribeCta.classList.remove("hidden");
+    subscribeLink.href = `${BACKEND_URL}/checkout?email=${encodeURIComponent(email)}`;
     settingsSection.classList.add("hidden");
   }
 }
