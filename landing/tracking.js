@@ -15,7 +15,7 @@
  * browser events (same event_id => counted once).
  */
 (function () {
-  var META_PIXEL_ID = "";     // e.g. "1234567890123456"
+  var META_PIXEL_ID = "1410585197572438";
   var TIKTOK_PIXEL_ID = "";   // e.g. "CabcdEfghIjklMnopQrst"
 
   var PURCHASE_VALUE = 25.0;  // subscription price used for ROAS reporting
