@@ -981,6 +981,10 @@ h2 {
   z-index: 1000;
 }
 
+.cancel-modal[hidden] {
+  display: none;
+}
+
 .cancel-modal-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
