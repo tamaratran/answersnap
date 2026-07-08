@@ -43,6 +43,7 @@
 
   <!-- Meta Pixel + TikTok Pixel -->
   <script defer src="tracking.js"></script>
+  <script src="auth.js"></script>
 </head>
 <body class="has-sticky-cta">
   <!-- Nav -->
@@ -58,7 +59,7 @@
         <a href="#how-it-works">How It Works</a>
         <a href="#pricing">Pricing</a>
         <a href="#faq">FAQ</a>
-        <a href="/account.html">Manage Subscription</a>
+        <a href="/account.html" data-account-link hidden>Manage Subscription</a>
       </div>
       <button class="nav-hamburger" aria-label="Menu" onclick="this.classList.toggle('open');document.querySelector('.nav-mobile-menu').classList.toggle('open')">
         <span></span><span></span><span></span>
@@ -71,8 +72,16 @@
     <a href="#how-it-works" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">How It Works</a>
     <a href="#pricing" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">Pricing</a>
     <a href="#faq" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">FAQ</a>
-    <a href="/account.html" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">Manage Subscription</a>
+    <a href="/account.html" data-account-link hidden onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">Manage Subscription</a>
   </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (window.CheatlyAuth && CheatlyAuth.get()) {
+        var links = document.querySelectorAll('[data-account-link]');
+        for (var i = 0; i < links.length; i++) links[i].hidden = false;
+      }
+    });
+  </script>
 
   <!-- Hero -->
   <section class="hero">
@@ -449,7 +458,7 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      <p>&copy; 2025 Cheatly. Built with AI. &middot; <a href="/account.html">Manage Subscription</a></p>
+      <p>&copy; 2025 Cheatly. Built with AI. <span data-account-link hidden>&middot; <a href="/account.html">Manage Subscription</a></span></p>
     </div>
   </footer>
 

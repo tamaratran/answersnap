@@ -12,6 +12,7 @@
   <link rel="icon" href="icon16.png" sizes="16x16" type="image/png" />
   <link rel="icon" href="icon48.png" sizes="48x48" type="image/png" />
   <link rel="icon" href="icon128.png" sizes="128x128" type="image/png" />
+  <script src="auth.js"></script>
 </head>
 <body>
   <!-- Nav -->
@@ -87,7 +88,7 @@
   <script>
     (function () {
       const BACKEND_URL = "https://cheatly-backend.fly.dev";
-      let token = null;
+      let token = window.CheatlyAuth ? CheatlyAuth.get() : null;
 
       const el = (id) => document.getElementById(id);
       const loginForm = el("login-form");
@@ -174,6 +175,7 @@
           }
           const data = await resp.json();
           token = data.token;
+          if (window.CheatlyAuth) CheatlyAuth.set(token);
           await loadStatus();
         } catch (err) {
           loginError.textContent = "Network error. Please try again."; loginError.hidden = false;
@@ -219,9 +221,17 @@
         }
       });
 
-      function signOut(e) { if (e) e.preventDefault(); token = null; show("login"); }
+      function signOut(e) { if (e) e.preventDefault(); token = null; if (window.CheatlyAuth) CheatlyAuth.clear(); show("login"); }
       el("signout-link").addEventListener("click", signOut);
       el("signout-link-2").addEventListener("click", signOut);
+
+      if (token) {
+        loadStatus().catch(function () {
+          token = null;
+          if (window.CheatlyAuth) CheatlyAuth.clear();
+          show("login");
+        });
+      }
     })();
   </script>
 </body>
