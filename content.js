@@ -572,6 +572,8 @@
         showToast("Log in to Cheatly to use this feature");
       } else if (response.error === "SUBSCRIPTION_REQUIRED") {
         showToast("Subscribe to Cheatly to get answers");
+      } else if (response.error === "RATE_LIMITED") {
+        showToast("Session expired — re-enable Cheatly to continue");
       } else if (response.error) {
         showError(response.error);
       } else {
