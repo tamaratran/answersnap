@@ -156,6 +156,7 @@ class SubscriptionStatus(BaseModel):
     trial: bool = False
     plan: str = ""
     current_period_end: str = ""
+    cancel_at_period_end: bool = False
     rate_limited: bool = False
     session_minutes_remaining: int = -1
 
@@ -267,10 +268,20 @@ async def check_stripe_subscription(stripe_customer_id: str) -> dict:
                     "trial": is_trial,
                     "plan": plan_name,
                     "current_period_end": period_end,
+                    "cancel_at_period_end": bool(sub.cancel_at_period_end),
                 }
-        return {"subscribed": False, "trial": False, "plan": "", "current_period_end": ""}
+        return {"subscribed": False, "trial": False, "plan": "", "current_period_end": "", "cancel_at_period_end": False}
     except stripe.StripeError:
-        return {"subscribed": False, "trial": False, "plan": "", "current_period_end": ""}
+        return {"subscribed": False, "trial": False, "plan": "", "current_period_end": "", "cancel_at_period_end": False}
+
+
+async def _active_subscription_id(stripe_customer_id: str) -> Optional[str]:
+    """Return the id of the customer's active/trialing subscription, if any."""
+    subs = stripe.Subscription.list(customer=stripe_customer_id, status="all", limit=5)
+    for sub in subs.data:
+        if sub.status in ("active", "trialing"):
+            return sub.id
+    return None
 
 
 # ── Auth Endpoints ────────────────────────────────────────────────────────────
@@ -404,6 +415,81 @@ async def reset_session(request: Request):
         await db.close()
 
     return {"ok": True, "message": "Session reset. You have a new 1-hour window."}
+
+
+async def _customer_id_for(email: str) -> Optional[str]:
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT stripe_customer_id FROM users WHERE email = ?", (email,)
+        )
+        row = await cursor.fetchone()
+    finally:
+        await db.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+    return row[0]
+
+
+@app.post("/auth/cancel", response_model=SubscriptionStatus)
+async def cancel_subscription(request: Request):
+    """Cancel the logged-in user's subscription at the end of the current billing
+    period. They keep access until then; no immediate charge/refund is involved."""
+    user = await get_current_user(request)
+    email = user["sub"]
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+
+    customer_id = await _customer_id_for(email)
+    if not customer_id:
+        raise HTTPException(status_code=404, detail="No subscription found")
+
+    try:
+        sub_id = await _active_subscription_id(customer_id)
+        if not sub_id:
+            raise HTTPException(status_code=404, detail="No active subscription to cancel")
+        stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
+    except stripe.StripeError as e:
+        raise HTTPException(status_code=502, detail=f"Stripe error: {str(e)}")
+
+    sub_info = await check_stripe_subscription(customer_id)
+    rate_info = await check_rate_limit(email)
+    return SubscriptionStatus(
+        email=email,
+        rate_limited=rate_info["limited"],
+        session_minutes_remaining=rate_info["minutes_remaining"],
+        **sub_info,
+    )
+
+
+@app.post("/auth/resume", response_model=SubscriptionStatus)
+async def resume_subscription(request: Request):
+    """Undo a pending cancellation so the subscription renews as normal."""
+    user = await get_current_user(request)
+    email = user["sub"]
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+
+    customer_id = await _customer_id_for(email)
+    if not customer_id:
+        raise HTTPException(status_code=404, detail="No subscription found")
+
+    try:
+        sub_id = await _active_subscription_id(customer_id)
+        if not sub_id:
+            raise HTTPException(status_code=404, detail="No active subscription")
+        stripe.Subscription.modify(sub_id, cancel_at_period_end=False)
+    except stripe.StripeError as e:
+        raise HTTPException(status_code=502, detail=f"Stripe error: {str(e)}")
+
+    sub_info = await check_stripe_subscription(customer_id)
+    rate_info = await check_rate_limit(email)
+    return SubscriptionStatus(
+        email=email,
+        rate_limited=rate_info["limited"],
+        session_minutes_remaining=rate_info["minutes_remaining"],
+        **sub_info,
+    )
 
 
 # ── AI Endpoints ──────────────────────────────────────────────────────────────
