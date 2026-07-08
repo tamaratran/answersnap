@@ -16,7 +16,7 @@
  */
 (function () {
   var META_PIXEL_ID = "1410585197572438";
-  var TIKTOK_PIXEL_ID = "";   // e.g. "CabcdEfghIjklMnopQrst"
+  var TIKTOK_PIXEL_ID = "D96SKIBC77U9GV0AL040";
 
   var PURCHASE_VALUE = 25.0;  // subscription price used for ROAS reporting
   var CURRENCY = "USD";
