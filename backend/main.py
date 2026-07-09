@@ -415,7 +415,7 @@ async def create_desktop_checkout():
     if not price_id:
         raise HTTPException(status_code=500, detail="Stripe price not configured")
 
-    return await _create_stripe_checkout(price_id, "desktop-download.html")
+    return await _create_stripe_checkout(price_id, "lockdown-browser-download.html")
 
 
 async def _create_stripe_checkout(price_id: str, success_path: str):
