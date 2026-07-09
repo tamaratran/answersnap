@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Your Subscription — Cheatly</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="icon16.png" sizes="16x16" type="image/png" />
+  <link rel="icon" href="icon48.png" sizes="48x48" type="image/png" />
+  <link rel="icon" href="icon128.png" sizes="128x128" type="image/png" />
+  <script src="auth.js"></script>
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="/" class="nav-logo">
+        <img src="icon48.png" alt="Cheatly" class="logo-img" width="28" height="28" />
+        <span>Cheatly</span>
+      </a>
+    </div>
+  </nav>
+
+  <section class="download-hero">
+    <div class="container">
+      <div class="download-card">
+        <h1>Manage Subscription</h1>
+        <p class="download-subtitle">Sign in with your Cheatly account to view or cancel your subscription.</p>
+
+        <!-- Login -->
+        <form id="login-form" class="account-form" autocomplete="on">
+          <label class="account-label" for="login-email">Email</label>
+          <input id="login-email" name="email" type="email" class="account-input" placeholder="you@example.com" autocomplete="email" required />
+          <label class="account-label" for="login-password">Password</label>
+          <input id="login-password" name="password" type="password" class="account-input" placeholder="Your password" autocomplete="current-password" required />
+          <div id="login-error" class="account-error" hidden></div>
+          <button type="submit" id="login-submit" class="btn btn-primary btn-large download-btn">Sign In</button>
+        </form>
+
+        <!-- Subscription status -->
+        <div id="status-view" hidden>
+          <div class="download-badge" id="status-badge">Active</div>
+          <h2 style="margin:12px 0 4px" id="status-plan">Your plan</h2>
+          <p class="download-subtitle" id="status-detail"></p>
+          <div id="status-error" class="account-error" hidden></div>
+
+          <button type="button" id="cancel-btn" class="btn btn-secondary btn-large download-btn" hidden>Cancel Subscription</button>
+          <button type="button" id="resume-btn" class="btn btn-primary btn-large download-btn" hidden>Resume Subscription</button>
+          <p class="download-file-info"><a href="#" id="signout-link">Sign out</a></p>
+        </div>
+
+        <!-- No subscription -->
+        <div id="none-view" hidden>
+          <div class="download-badge">No Active Subscription</div>
+          <h2 style="margin:12px 0 4px">You're not subscribed</h2>
+          <p class="download-subtitle">There's no active subscription on this account.</p>
+          <a href="https://cheatly-backend.fly.dev/checkout" class="btn btn-primary btn-large download-btn">Start Free Trial</a>
+          <p class="download-file-info"><a href="#" id="signout-link-2">Sign out</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2025 Cheatly. Built with AI.</p>
+    </div>
+  </footer>
+
+  <!-- Cancel confirmation modal -->
+  <div id="cancel-modal" class="cancel-modal" hidden>
+    <div class="cancel-modal-card">
+      <h3>Cancel your subscription?</h3>
+      <p id="cancel-modal-text">You'll keep access until the end of your current billing period, then you won't be charged again.</p>
+      <div id="cancel-modal-error" class="account-error" hidden></div>
+      <div class="cancel-modal-actions">
+        <button type="button" id="cancel-modal-keep" class="btn btn-primary">Keep Subscription</button>
+        <button type="button" id="cancel-modal-confirm" class="btn btn-secondary">Yes, Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script defer src="/_vercel/insights/script.js"></script>
+  <script>
+    (function () {
+      const BACKEND_URL = "https://cheatly-backend.fly.dev";
+      let token = window.CheatlyAuth ? CheatlyAuth.get() : null;
+
+      const el = (id) => document.getElementById(id);
+      const loginForm = el("login-form");
+      const loginError = el("login-error");
+      const loginSubmit = el("login-submit");
+      const statusView = el("status-view");
+      const noneView = el("none-view");
+      const cancelModal = el("cancel-modal");
+
+      function fmtDate(iso) {
+        if (!iso) return "";
+        try {
+          return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+        } catch (_) { return iso; }
+      }
+
+      function show(view) {
+        loginForm.hidden = view !== "login";
+        statusView.hidden = view !== "status";
+        noneView.hidden = view !== "none";
+      }
+
+      function renderStatus(s) {
+        if (!s.subscribed) { show("none"); return; }
+        show("status");
+        el("status-plan").textContent = s.plan ? "Cheatly — " + s.plan : "Cheatly subscription";
+        const cancelBtn = el("cancel-btn");
+        const resumeBtn = el("resume-btn");
+        const badge = el("status-badge");
+        const when = fmtDate(s.current_period_end);
+        if (s.cancel_at_period_end) {
+          badge.textContent = "Cancelling";
+          el("status-detail").textContent = when
+            ? "Your subscription is set to cancel on " + when + ". You keep access until then."
+            : "Your subscription is set to cancel at the end of the period.";
+          cancelBtn.hidden = true;
+          resumeBtn.hidden = false;
+        } else {
+          badge.textContent = s.trial ? "Free Trial" : "Active";
+          let detail = s.trial ? "Your free trial " : "Your subscription renews ";
+          detail += s.trial ? "ends " : "on ";
+          el("status-detail").textContent = when ? detail + when + "." : (s.trial ? "You're on a free trial." : "Your subscription is active.");
+          cancelBtn.hidden = false;
+          resumeBtn.hidden = true;
+        }
+      }
+
+      async function api(path, method) {
+        const resp = await fetch(BACKEND_URL + path, {
+          method: method || "GET",
+          headers: { "Authorization": "Bearer " + token },
+        });
+        if (!resp.ok) {
+          let detail = "Something went wrong. Please try again.";
+          try { const j = await resp.json(); if (j && j.detail) detail = j.detail; } catch (_) {}
+          const err = new Error(detail); err.status = resp.status; throw err;
+        }
+        return resp.json();
+      }
+
+      async function loadStatus() {
+        const s = await api("/auth/me");
+        renderStatus(s);
+      }
+
+      loginForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        loginError.hidden = true;
+        const email = el("login-email").value.trim().toLowerCase();
+        const password = el("login-password").value;
+        loginSubmit.disabled = true;
+        loginSubmit.textContent = "Signing in…";
+        try {
+          const resp = await fetch(BACKEND_URL + "/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+          if (!resp.ok) {
+            let detail = "Invalid email or password.";
+            try { const j = await resp.json(); if (j && j.detail) detail = j.detail; } catch (_) {}
+            loginError.textContent = detail; loginError.hidden = false;
+            return;
+          }
+          const data = await resp.json();
+          token = data.token;
+          if (window.CheatlyAuth) CheatlyAuth.set(token);
+          await loadStatus();
+        } catch (err) {
+          loginError.textContent = "Network error. Please try again."; loginError.hidden = false;
+        } finally {
+          loginSubmit.disabled = false;
+          loginSubmit.textContent = "Sign In";
+        }
+      });
+
+      el("cancel-btn").addEventListener("click", function () {
+        el("cancel-modal-error").hidden = true;
+        cancelModal.hidden = false;
+      });
+      el("cancel-modal-keep").addEventListener("click", function () { cancelModal.hidden = true; });
+
+      el("cancel-modal-confirm").addEventListener("click", async function () {
+        const btn = this;
+        btn.disabled = true; btn.textContent = "Cancelling…";
+        try {
+          const s = await api("/auth/cancel", "POST");
+          cancelModal.hidden = true;
+          renderStatus(s);
+        } catch (err) {
+          el("cancel-modal-error").textContent = err.message || "Could not cancel. Please try again.";
+          el("cancel-modal-error").hidden = false;
+        } finally {
+          btn.disabled = false; btn.textContent = "Yes, Cancel";
+        }
+      });
+
+      el("resume-btn").addEventListener("click", async function () {
+        const btn = this;
+        btn.disabled = true; btn.textContent = "Resuming…";
+        el("status-error").hidden = true;
+        try {
+          const s = await api("/auth/resume", "POST");
+          renderStatus(s);
+        } catch (err) {
+          el("status-error").textContent = err.message || "Could not resume. Please try again.";
+          el("status-error").hidden = false;
+        } finally {
+          btn.disabled = false; btn.textContent = "Resume Subscription";
+        }
+      });
+
+      function signOut(e) { if (e) e.preventDefault(); token = null; if (window.CheatlyAuth) CheatlyAuth.clear(); show("login"); }
+      el("signout-link").addEventListener("click", signOut);
+      el("signout-link-2").addEventListener("click", signOut);
+
+      if (token) {
+        loadStatus().catch(function () {
+          token = null;
+          if (window.CheatlyAuth) CheatlyAuth.clear();
+          show("login");
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

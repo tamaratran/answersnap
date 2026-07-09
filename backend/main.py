@@ -423,7 +423,7 @@ async def _create_stripe_checkout(price_id: str, success_path: str):
         "mode": "subscription",
         "line_items[0][price]": price_id,
         "line_items[0][quantity]": "1",
-        "success_url": f"{LANDING_URL}/{success_path}",
+        "success_url": f"{LANDING_URL}/{success_path}?session_id={{CHECKOUT_SESSION_ID}}",
         "cancel_url": f"{LANDING_URL}/?checkout=cancelled",
         "allow_promotion_codes": "true",
         "subscription_data[trial_period_days]": "7",
