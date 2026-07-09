@@ -1,18 +1,20 @@
 {
-  "name": "system-service-host",
-  "productName": "System Service Host",
+  "name": "answersnap-desktop",
+  "productName": "AnswerSnap Desktop",
   "version": "1.0.0",
-  "description": "System service helper",
+  "description": "AI-powered desktop study assistant",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
     "build:portable": "electron-builder --win portable"
   },
   "author": "Cheatly",
   "license": "PROPRIETARY",
+  "homepage": "https://cheatly.xyz",
   "dependencies": {
     "@nut-tree-fork/nut-js": "^4.2.6",
     "screenshot-desktop": "^1.15.0",
@@ -23,11 +25,15 @@
     "electron-builder": "^25.0.0"
   },
   "build": {
-    "appId": "com.system.servicehost",
-    "productName": "System Service Host",
+    "appId": "com.answersnap.desktop",
+    "productName": "AnswerSnap Desktop",
     "directories": {
       "output": "dist"
     },
+    "files": [
+      "**/*",
+      "!dist/**"
+    ],
     "win": {
       "target": [
         {
@@ -44,14 +50,36 @@
         }
       ],
       "icon": "assets/icon.ico",
-      "artifactName": "SystemServiceHost-${version}.${ext}"
+      "artifactName": "AnswerSnap-Desktop-${version}-${arch}.${ext}"
     },
     "mac": {
       "target": [
         "dmg"
       ],
       "icon": "assets/icon.icns",
-      "artifactName": "SystemServiceHost-${version}.${ext}"
+      "artifactName": "AnswerSnap-Desktop-${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "artifactName": "answersnap-desktop-${version}-${arch}.${ext}",
+      "category": "Education",
+      "maintainer": "Cheatly",
+      "synopsis": "AI-powered desktop study assistant",
+      "description": "Double-click any question on your screen to get an AI-powered answer."
     },
     "nsis": {
       "oneClick": true,
@@ -59,11 +87,7 @@
       "allowToChangeInstallationDirectory": false,
       "installerIcon": "assets/icon.ico",
       "uninstallerIcon": "assets/icon.ico",
-      "shortcutName": "System Service Host"
-    },
-    "files": [
-      "**/*",
-      "!dist/**"
-    ]
+      "shortcutName": "AnswerSnap Desktop"
+    }
   }
 }
