@@ -25,6 +25,7 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
+STRIPE_DESKTOP_PRICE_ID = os.environ.get("STRIPE_DESKTOP_PRICE_ID", "")
 LANDING_URL = os.environ.get("LANDING_URL", "https://cheatly.xyz")
 STRIPE_CHECKOUT_URL = "https://api.stripe.com/v1/checkout/sessions"
 
@@ -402,11 +403,27 @@ async def create_checkout():
     if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID:
         raise HTTPException(status_code=500, detail="Stripe not configured")
 
+    return await _create_stripe_checkout(STRIPE_PRICE_ID, "download.html")
+
+
+@app.get("/checkout/desktop")
+async def create_desktop_checkout():
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+
+    price_id = STRIPE_DESKTOP_PRICE_ID or STRIPE_PRICE_ID
+    if not price_id:
+        raise HTTPException(status_code=500, detail="Stripe price not configured")
+
+    return await _create_stripe_checkout(price_id, "desktop-download.html")
+
+
+async def _create_stripe_checkout(price_id: str, success_path: str):
     payload = {
         "mode": "subscription",
-        "line_items[0][price]": STRIPE_PRICE_ID,
+        "line_items[0][price]": price_id,
         "line_items[0][quantity]": "1",
-        "success_url": f"{LANDING_URL}/download.html",
+        "success_url": f"{LANDING_URL}/{success_path}",
         "cancel_url": f"{LANDING_URL}/?checkout=cancelled",
         "allow_promotion_codes": "true",
         "subscription_data[trial_period_days]": "7",

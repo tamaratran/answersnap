@@ -5,3 +5,5 @@ dist/
 *.pem
 *.zip
 !landing/cheatly-extension.zip
+landing/installers/*
+!landing/installers/.gitkeep

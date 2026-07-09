@@ -723,9 +723,15 @@ h2 {
 }
 
 /* Pricing */
-.pricing-card {
-  max-width: 520px;
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  max-width: 900px;
   margin: 0 auto;
+}
+
+.pricing-card {
   text-align: center;
   background: linear-gradient(135deg, var(--bg-card), rgba(99, 102, 241, 0.08));
   border: 1px solid var(--accent);
@@ -862,6 +868,24 @@ h2 {
   margin-top: 12px;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.download-platforms {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.download-platforms .download-btn {
+  justify-content: center;
+  width: 100%;
+}
+
+.download-platforms .download-file-info {
+  margin-top: 0;
+  margin-bottom: 8px;
 }
 
 /* Install Steps */
@@ -1025,7 +1049,8 @@ h2 {
   .features-grid,
   .modes-grid,
   .testimonials-grid,
-  .demo-grid {
+  .demo-grid,
+  .pricing-grid {
     grid-template-columns: 1fr;
   }
 
