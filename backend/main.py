@@ -310,8 +310,8 @@ async def locate_answer(req: LocateRequest):
             # to its left (radio buttons are left of option text).
             horiz_score = -abs(col_x - click_x + 90)
 
-            # Prefer the run whose top is just below the click.
-            vert_score = -abs(top - click_y - 55)
+            # Prefer the run that starts closest to (just below) the click.
+            vert_score = -abs(top - rel_click_y)
 
             # Length, consistent spacing, and containment.
             length_score = n * 15

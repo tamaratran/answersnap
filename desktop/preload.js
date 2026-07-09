@@ -1,5 +1,5 @@
 /**
- * Cheatly Desktop — Preload Script
+ * AnswerSnap Desktop — Preload Script
  *
  * Exposes a safe IPC bridge between the renderer and main process.
  */

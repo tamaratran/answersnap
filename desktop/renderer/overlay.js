@@ -1,5 +1,5 @@
 /**
- * Cheatly Desktop — Overlay Renderer
+ * AnswerSnap Desktop — Overlay Renderer
  *
  * Receives state updates from the main process and updates the UI.
  */
@@ -45,16 +45,17 @@ window.cheatly.onState((data) => {
       break;
     case "answer":
       answerTextEl.textContent = data.answer;
-      if (data.status) {
-        clipboardStatus.textContent = data.status;
-      } else if (data.copied) {
-        clipboardStatus.textContent = "Copied to clipboard";
-      }
+      clipboardStatus.textContent = data.status || "Answer ready";
+      showState("answer");
+      break;
+    case "copied":
+      clipboardStatus.textContent = data.status || "Copied to clipboard";
       showState("answer");
       break;
     case "typed":
       clipboardStatus.textContent =
-        data.method === "typed" ? "Typed into field" : "Copied to clipboard (paste with Ctrl+V)";
+        data.method === "typed" ? "Typed into field" : "Type unavailable — press Ctrl+Shift+C to copy";
+      showState("answer");
       break;
     case "mode":
       if (dcStatus) dcStatus.textContent = data.doubleClick ? "(on)" : "(off)";
@@ -63,7 +64,6 @@ window.cheatly.onState((data) => {
     case "error":
       errorTextEl.textContent = data.message;
       showState("error");
-      // Auto-revert to idle after 5s
       setTimeout(() => showState("idle"), 5000);
       break;
   }
@@ -75,6 +75,7 @@ copyBtn.addEventListener("click", () => {
   if (text) {
     navigator.clipboard.writeText(text).then(() => {
       copyBtn.innerHTML = "&#10003;";
+      clipboardStatus.textContent = "Copied to clipboard";
       setTimeout(() => {
         copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
       }, 1500);

@@ -39,21 +39,18 @@ function copyToClipboard(text) {
 
 /**
  * Type the answer into the currently focused field using OS-level keystrokes.
- * Falls back to clipboard copy if nut-js is not available.
  */
 async function typeAnswer(text) {
   const { keyboard: kb } = await getNut();
   if (!kb) {
-    copyToClipboard(text);
-    return { method: "clipboard", success: true };
+    return { method: "unavailable", success: false };
   }
 
   try {
     await kb.type(text);
     return { method: "typed", success: true };
   } catch (err) {
-    copyToClipboard(text);
-    return { method: "clipboard", success: true, fallback: true, error: err.message };
+    return { method: "unavailable", success: false, error: err.message };
   }
 }
 
