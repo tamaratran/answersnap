@@ -7,7 +7,6 @@
  */
 
 const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require("electron");
-const fs = require("fs");
 const path = require("path");
 const { captureScreen } = require("./lib/capture");
 const { queryBackend, locateAnswer } = require("./lib/backend");
@@ -20,7 +19,6 @@ if (!gotTheLock) {
   app.quit();
 }
 
-let onboardingWindow = null;
 let overlayWindow = null;
 let isQuerying = false;
 let lastAnswer = "";
@@ -29,65 +27,13 @@ let lastAnswer = "";
 // Ctrl+Shift+D.
 let doubleClickEnabled = true;
 
-const TERMS_FLAG = path.join(app.getPath("userData"), ".terms-accepted-v1");
-
 // ── App Configuration ────────────────────────────────────────────────────────
 
 if (process.platform === "darwin") {
   app.dock.hide();
 }
 
-function termsAccepted() {
-  try {
-    return fs.existsSync(TERMS_FLAG);
-  } catch (_) {
-    return false;
-  }
-}
-
-function setTermsAccepted(value) {
-  try {
-    if (value) {
-      fs.writeFileSync(TERMS_FLAG, "1");
-    } else {
-      fs.rmSync(TERMS_FLAG, { force: true });
-    }
-  } catch (_) {
-    // ignore
-  }
-}
-
 // ── Windows ──────────────────────────────────────────────────────────────────
-
-function createOnboardingWindow() {
-  onboardingWindow = new BrowserWindow({
-    width: 640,
-    height: 520,
-    show: false,
-    resizable: false,
-    frame: true,
-    title: "AnswerSnap — Terms of Use",
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      nodeIntegration: false,
-      contextIsolation: true,
-    },
-  });
-
-  onboardingWindow.loadFile(path.join(__dirname, "renderer", "onboarding.html"));
-
-  onboardingWindow.once("ready-to-show", () => {
-    onboardingWindow.show();
-  });
-
-  onboardingWindow.on("closed", () => {
-    onboardingWindow = null;
-    if (!termsAccepted()) {
-      app.isQuitting = true;
-      app.quit();
-    }
-  });
-}
 
 function createOverlayWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -103,7 +49,7 @@ function createOverlayWindow() {
     transparent: false,
     backgroundColor: "#0f0f19",
     alwaysOnTop: false,
-    skipTaskbar: false,
+    skipTaskbar: true,
     focusable: true,
     resizable: true,
     hasShadow: false,
@@ -169,7 +115,7 @@ function registerHotkeys() {
     }
   });
 
-  // Copy the last answer to clipboard manually
+  // Copy the last answer to clipboard manually (do not show the overlay)
   globalShortcut.register("CommandOrControl+Shift+C", () => {
     if (!lastAnswer) return;
     copyToClipboard(lastAnswer);
@@ -178,7 +124,6 @@ function registerHotkeys() {
         type: "copied",
         status: "Copied to clipboard",
       });
-      showOverlay();
     }
   });
 
@@ -370,18 +315,6 @@ ipcMain.on("set-ignore-mouse", (_event, ignore) => {
   }
 });
 
-ipcMain.on("accept-terms", () => {
-  setTermsAccepted(true);
-  if (onboardingWindow) onboardingWindow.close();
-  initApp();
-});
-
-ipcMain.on("decline-terms", () => {
-  setTermsAccepted(false);
-  app.isQuitting = true;
-  app.quit();
-});
-
 // ── App Lifecycle ──────────────────────────────────────────────────────────────
 
 function initApp() {
@@ -391,11 +324,7 @@ function initApp() {
 }
 
 app.whenReady().then(() => {
-  if (termsAccepted()) {
-    initApp();
-  } else {
-    createOnboardingWindow();
-  }
+  initApp();
 });
 
 app.on("will-quit", () => {

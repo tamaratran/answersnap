@@ -49,6 +49,6 @@ npm run build:mac
 
 Output goes to `desktop/dist/`.
 
-## Terms of Use
+## Terms of Service
 
-AnswerSnap is for personal study and unproctored homework only. You may not use it during proctored, supervised, or lockdown exams. The app is not guaranteed to be invisible to or compatible with any proctoring or lockdown browser.
+Use of AnswerSnap is governed by the [Terms of Service](../../TERMS_OF_SERVICE.md). By using the app, you agree that it is for personal study and unproctored homework only and may not be used in proctored, supervised, or lockdown exam environments.
