@@ -1,8 +1,8 @@
 {
-  "name": "answersnap-desktop",
-  "productName": "AnswerSnap Desktop",
+  "name": "answersnap-lockdown-browser",
+  "productName": "AnswerSnap Lockdown Browser",
   "version": "1.0.0",
-  "description": "AI-powered desktop study assistant",
+  "description": "AI-powered lockdown browser study assistant",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -10,11 +10,11 @@
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
-    "build:portable": "electron-builder --win portable"
+    "build:zip": "electron-builder --win zip"
   },
   "author": "Cheatly",
   "license": "PROPRIETARY",
-  "homepage": "https://cheatly.xyz",
+  "homepage": "https://cheatly.io",
   "dependencies": {
     "@nut-tree-fork/nut-js": "^4.2.6",
     "screenshot-desktop": "^1.15.0",
@@ -25,8 +25,8 @@
     "electron-builder": "^25.0.0"
   },
   "build": {
-    "appId": "com.answersnap.desktop",
-    "productName": "AnswerSnap Desktop",
+    "appId": "com.answersnap.lockdownbrowser",
+    "productName": "AnswerSnap Lockdown Browser",
     "directories": {
       "output": "dist"
     },
@@ -43,21 +43,21 @@
           ]
         },
         {
-          "target": "portable",
+          "target": "zip",
           "arch": [
             "x64"
           ]
         }
       ],
       "icon": "assets/icon.ico",
-      "artifactName": "AnswerSnap-Desktop-${version}-${arch}.${ext}"
+      "artifactName": "AnswerSnap-Lockdown-Browser-${version}-${arch}.${ext}"
     },
     "mac": {
       "target": [
         "dmg"
       ],
       "icon": "assets/icon.icns",
-      "artifactName": "AnswerSnap-Desktop-${version}.${ext}"
+      "artifactName": "AnswerSnap-Lockdown-Browser-${version}.${ext}"
     },
     "linux": {
       "target": [
@@ -75,10 +75,10 @@
         }
       ],
       "icon": "assets/icon.png",
-      "artifactName": "answersnap-desktop-${version}-${arch}.${ext}",
+      "artifactName": "answersnap-lockdown-browser-${version}-${arch}.${ext}",
       "category": "Education",
       "maintainer": "Cheatly",
-      "synopsis": "AI-powered desktop study assistant",
+      "synopsis": "AI-powered lockdown browser study assistant",
       "description": "Double-click any question on your screen to get an AI-powered answer."
     },
     "nsis": {
@@ -87,7 +87,7 @@
       "allowToChangeInstallationDirectory": false,
       "installerIcon": "assets/icon.ico",
       "uninstallerIcon": "assets/icon.ico",
-      "shortcutName": "AnswerSnap Desktop"
+      "shortcutName": "AnswerSnap Lockdown Browser"
     }
   }
 }
