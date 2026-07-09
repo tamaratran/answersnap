@@ -69,10 +69,10 @@ def build_prompt(selected_text: str, click_x: int = -1, click_y: int = -1) -> st
         context_hint = "\n\n".join(hints) + "\n\n"
 
     return (
-        f"{context_hint}You are an expert tutor. Look at this screenshot of a "
-        "question (exam, quiz, homework, etc.).\n\n"
+        f"{context_hint}You are an expert tutor solving exam/quiz questions from a "
+        "screenshot.\n\n"
         "Your job:\n"
-        "1. Identify the SINGLE question visible in the screenshot.\n"
+        "1. Identify the ONE question that the user double-clicked.\n"
         "2. Determine the correct answer for ONLY that one question.\n"
         "3. Return ONLY the answer in a concise format.\n\n"
         "Rules:\n"
@@ -83,13 +83,29 @@ def build_prompt(selected_text: str, click_x: int = -1, click_y: int = -1) -> st
         "- For fill-in-the-blank: return just the answer value\n"
         "- For short answer / essay: provide a concise but complete answer\n"
         "- Answer ONLY ONE question.\n"
-        "- Be careful with derivative rules: x^n and a^x are different. "
-        "For x^n, the derivative is n*x^(n-1). For a^x, the derivative is a^x*ln(a). "
-        "A constant number like 5^9 has derivative 0.\n"
+        "- IGNORE any pre-selected/highlighted radio button in the screenshot; "
+        "compute the answer from the question text, not from what is already selected.\n"
+        "- Be careful with derivative rules (the variable is x unless otherwise stated):\n"
+        "  * y = x^9  -> 9x^8   (power rule: d/dx[x^n] = n*x^(n-1))\n"
+        "  * y = 5^9  -> 0      (constant: 5^9 is just a number, no x variable, so derivative is 0)\n"
+        "  * y = 5^x  -> 5^x*ln(5) (exponential: d/dx[a^x] = a^x*ln(a))\n"
+        "  * Do not treat 5^9 as if it were x^9. The base must be the variable x to use the power rule.\n"
         "- Be direct. No preamble or explanation unless the question asks for it.\n"
         '- If you cannot determine the answer with confidence, say "Uncertain: " '
         "followed by your best guess."
     )
+
+
+def crop_image(img: np.ndarray, click_x: int, click_y: int, above: int, below: int, width: int):
+    """Return a crop around (click_x, click_y) plus the crop's top-left offset."""
+    h, w = img.shape[:2]
+    crop_height = above + below
+    x1 = max(0, min(click_x - width // 2, w - width))
+    y1 = max(0, min(click_y - above, h - crop_height))
+    x2 = min(w, x1 + width)
+    y2 = min(h, y1 + crop_height)
+    crop = img[y1:y2, x1:x2]
+    return crop, x1, y1
 
 
 def crop_screenshot(data_url: str, click_x: int, click_y: int) -> str:
@@ -104,17 +120,7 @@ def crop_screenshot(data_url: str, click_x: int, click_y: int) -> str:
     if img is None:
         return data_url
 
-    h, w = img.shape[:2]
-    CROP_WIDTH = 700
-    CROP_HEIGHT = 300
-    ABOVE = 80  # pixels to keep above the click so the full question text fits
-
-    x1 = max(0, min(click_x - CROP_WIDTH // 2, w - CROP_WIDTH))
-    y1 = max(0, min(click_y - ABOVE, h - CROP_HEIGHT))
-    x2 = min(w, x1 + CROP_WIDTH)
-    y2 = min(h, y1 + CROP_HEIGHT)
-
-    crop = img[y1:y2, x1:x2]
+    crop, _, _ = crop_image(img, click_x, click_y, above=60, below=360, width=700)
     ok, buf = cv2.imencode(".png", crop)
     if not ok:
         return data_url
@@ -193,16 +199,6 @@ async def get_answer(req: AnswerRequest):
     return AnswerResponse(answer=answer, optionIndex=option_index)
 
 
-def group_distance_to_click(group, click_y: int) -> float:
-    """Score a circle group by how close it is vertically to the user's click."""
-    if not group or click_y < 0:
-        return float("inf")
-    # The question text is just above the first option, so the best group is the
-    # one whose top is slightly below the click.
-    top_y = group[0][1]
-    return abs(top_y - click_y - 50)
-
-
 @app.post("/locate", response_model=LocateResponse)
 async def locate_answer(req: LocateRequest):
     """Given a screenshot and the correct answer, return pixel coordinates to click."""
@@ -213,7 +209,6 @@ async def locate_answer(req: LocateRequest):
     if not screenshot_data.startswith("data:"):
         screenshot_data = f"data:image/png;base64,{screenshot_data}"
 
-    # Use computer vision to detect radio buttons (circles) in the screenshot
     import base64
     import numpy as np
     import cv2
@@ -225,54 +220,115 @@ async def locate_answer(req: LocateRequest):
     img_bytes = base64.b64decode(img_data)
     img_array = np.frombuffer(img_bytes, dtype=np.uint8)
     cv_img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-    gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+    if cv_img is None:
+        raise HTTPException(status_code=422, detail="Could not decode screenshot")
+
+    # Crop around the click so we only look at the options for the
+    # question the user double-clicked.
+    crop, crop_x1, crop_y1 = crop_image(
+        cv_img, req.clickX, req.clickY, above=50, below=300, width=700
+    )
+    crop_h, crop_w = crop.shape[:2]
+    crop_gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
     # Detect circles (radio buttons are small circles, radius 5-15px)
     circles = cv2.HoughCircles(
-        gray, cv2.HOUGH_GRADIENT, dp=1, minDist=20,
-        param1=50, param2=15, minRadius=5, maxRadius=15
+        crop_gray, cv2.HOUGH_GRADIENT, dp=1, minDist=18,
+        param1=50, param2=13, minRadius=6, maxRadius=16
     )
 
     x, y = None, None
     confidence = "low"
+    best_group = None
+    best_score = -1e9
 
     if circles is not None:
         all_circles = np.uint16(np.around(circles[0]))
 
-        # Keep only circles that look like radio buttons rather than letter
-        # glyphs (e.g. the "o" in "option"): a radio sits at the start of a
-        # label, so the strip immediately to its left is uniform background,
-        # while a glyph has neighboring letters there.
-        h, w = gray.shape
+        # Radio buttons sit at the start of a label:
+        #   - uniform background immediately to the left
+        #   - option text immediately to the right
+        # Letter glyphs (e.g. "0", "o") have neighbouring letters on at
+        # least one side.
         radio_circles = []
         for cx, cy, cr in all_circles:
             cx, cy, cr = int(cx), int(cy), int(cr)
-            x0 = max(0, cx - 4 * cr)
-            x1 = max(0, cx - 2 * cr)
             y0 = max(0, cy - cr)
-            y1 = min(h, cy + cr)
-            if x1 <= x0 or y1 <= y0:
+            y1 = min(crop_h, cy + cr)
+            if y1 <= y0:
                 continue
-            left_strip = gray[y0:y1, x0:x1]
-            if left_strip.size == 0 or left_strip.std() > 12:
+
+            # Left of the circle should be background
+            x_left0 = max(0, cx - 4 * cr)
+            x_left1 = max(0, cx - 2 * cr)
+            if x_left1 <= x_left0:
                 continue
+            left_strip = crop_gray[y0:y1, x_left0:x_left1]
+            if left_strip.size == 0:
+                continue
+            if left_strip.std() > 10:
+                continue
+
+            # Right of the circle should contain label text (non-uniform)
+            x_right0 = min(crop_w, cx + 2 * cr)
+            x_right1 = min(crop_w, cx + 5 * cr)
+            if x_right1 <= x_right0:
+                continue
+            right_strip = crop_gray[y0:y1, x_right0:x_right1]
+            if right_strip.size == 0 or right_strip.std() < 12:
+                continue
+
             radio_circles.append((cx, cy, cr))
 
-        # Find vertical groups of circles (same x ± 10px, consistent spacing)
+        # Find vertical groups of radio circles (same x ± 8px, consistent spacing)
         x_groups = {}
         for cx, cy, cr in radio_circles:
-            bucket = int(cx) // 10 * 10
+            bucket = int(cx) // 8 * 8
             if bucket not in x_groups:
                 x_groups[bucket] = []
             x_groups[bucket].append((int(cx), int(cy), int(cr)))
 
-        # Merge adjacent x-buckets and find groups of 3+ circles
+        def group_score(run, click_x, click_y, crop_h, option_index):
+            n = len(run)
+            spacings = [run[k+1][1] - run[k][1] for k in range(n - 1)]
+            if not spacings:
+                return -1e9
+            avg = sum(spacings) / len(spacings)
+            max_dev = max(abs(s - avg) for s in spacings)
+            if avg < 25 or avg > 60:
+                return -1e9
+            if max_dev / avg > 0.35:
+                return -1e9
+
+            # Options should be below the click, and the whole run should fit
+            # in the crop (which only shows this question's options).
+            top = run[0][1]
+            bottom = run[-1][1]
+            col_x = sum(c[0] for c in run) / n
+
+            # Prefer the column that is roughly under the question text and
+            # to its left (radio buttons are left of option text).
+            horiz_score = -abs(col_x - click_x + 90)
+
+            # Prefer the run whose top is just below the click.
+            vert_score = -abs(top - click_y - 55)
+
+            # Length, consistent spacing, and containment.
+            length_score = n * 15
+            spacing_score = -max_dev
+            containment = 0
+            if req.optionIndex > 0 and option_index <= n:
+                containment = 10
+
+            return length_score + spacing_score + horiz_score + vert_score + containment
+
         best_group = None
-        best_score = 0
+        best_score = -1e9
         sorted_buckets = sorted(x_groups.keys())
+        rel_click_x = req.clickX - crop_x1
+        rel_click_y = req.clickY - crop_y1
 
         for i, bucket in enumerate(sorted_buckets):
-            # Merge with adjacent buckets (within 5px to handle rounding)
             merged = list(x_groups[bucket])
             for j in range(i + 1, len(sorted_buckets)):
                 if sorted_buckets[j] - bucket <= 5:
@@ -283,62 +339,51 @@ async def locate_answer(req: LocateRequest):
             if len(merged) < 3:
                 continue
 
-            # Sort by y and check if circles have similar radius
             merged.sort(key=lambda c: c[1])
             radii = [c[2] for c in merged]
-            if max(radii) - min(radii) > 5:
+            if max(radii) - min(radii) > 6:
                 continue
 
-            # Find the best contiguous run of 3+ circles with consistent
-            # vertical spacing, so a stray circle above or below the real
-            # option list doesn't disqualify the whole column.
+            # Find the best contiguous run of 3+ circles
             for start in range(len(merged) - 2):
                 for end in range(len(merged), start + 2, -1):
                     run = merged[start:end]
-                    spacings = [run[k+1][1] - run[k][1] for k in range(len(run)-1)]
-                    avg_spacing = sum(spacings) / len(spacings)
-                    if avg_spacing < 20 or avg_spacing > 80:
-                        continue
-                    # All spacings should be within 30% of average
-                    if not all(abs(s - avg_spacing) / avg_spacing < 0.3 for s in spacings):
-                        continue
-
-                    # Score: more circles = better; consistent spacing = better,
-                    # and the group should be vertically near the user's click.
-                    score = len(run) * 10 - max(abs(s - avg_spacing) for s in spacings)
-                    if req.clickY >= 0:
-                        dist = group_distance_to_click(run, req.clickY)
-                        score -= dist * 0.5
+                    score = group_score(run, rel_click_x, rel_click_y, crop_h, req.optionIndex)
                     if score > best_score:
                         best_score = score
                         best_group = run
 
-        if best_group:
-            # If the model provided an option index, use it directly. This is much
-            # more reliable than guessing from the first letter of the answer text,
-            # especially when options are unlabeled (e.g., Google Forms).
-            if req.optionIndex > 0 and req.optionIndex <= len(best_group):
+        if best_group and best_score > -1e8:
+            n = len(best_group)
+            avg_spacing = sum(best_group[k+1][1] - best_group[k][1] for k in range(n - 1)) / (n - 1)
+
+            if req.optionIndex > 0 and req.optionIndex <= n:
                 idx = req.optionIndex - 1
-                x = best_group[idx][0]
-                y = best_group[idx][1]
+                x = best_group[idx][0] + crop_x1
+                y = best_group[idx][1] + crop_y1
                 confidence = "high"
             else:
-                # Fallback: try to infer the index from a leading A-E letter.
+                # Try to infer from answer letter; fall back to best column top.
                 target_letter = req.answer.strip()[0].upper()
                 target_idx = ord(target_letter) - ord('A')
 
-                if 0 <= target_idx < len(best_group):
-                    x = best_group[target_idx][0]
-                    y = best_group[target_idx][1]
+                if 0 <= target_idx < n:
+                    x = best_group[target_idx][0] + crop_x1
+                    y = best_group[target_idx][1] + crop_y1
                     confidence = "high"
                 else:
-                    x = best_group[0][0]
-                    y = best_group[0][1]
+                    x = best_group[0][0] + crop_x1
+                    y = best_group[0][1] + crop_y1
                     confidence = "medium"
 
+    # Fallback using geometry when CV does not find a good group.
     if x is None or y is None:
-        # Fallback: if circle detection fails, return error
-        print("[LOCATE CV] No radio button group detected, returning error")
+        if req.optionIndex > 0:
+            x = max(0, req.clickX - 100)
+            y = req.clickY + 60 + (req.optionIndex - 1) * 40
+            confidence = "low"
+
+    if x is None or y is None:
         raise HTTPException(
             status_code=422, detail="Could not detect radio buttons in screenshot"
         )
