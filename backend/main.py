@@ -25,9 +25,8 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
-STRIPE_DESKTOP_PRICE_ID = os.environ.get("STRIPE_DESKTOP_PRICE_ID", "")
 LANDING_URL = os.environ.get("LANDING_URL", "https://cheatly.io")
-STRIPE_CHECKOUT_URL = "https://api.stripe.com/v1/checkout/sessions"
+STRIPE_CHECKOUT_URL = os.environ.get("STRIPE_CHECKOUT_URL", "https://api.stripe.com/v1/checkout/sessions")
 
 
 class AnswerRequest(BaseModel):
@@ -399,23 +398,12 @@ async def locate_answer(req: LocateRequest):
 
 
 @app.get("/checkout")
-async def create_checkout():
+async def create_checkout(product: str = "extension"):
     if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID:
         raise HTTPException(status_code=500, detail="Stripe not configured")
 
-    return await _create_stripe_checkout(STRIPE_PRICE_ID, "download.html")
-
-
-@app.get("/checkout/desktop")
-async def create_desktop_checkout():
-    if not STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=500, detail="Stripe not configured")
-
-    price_id = STRIPE_DESKTOP_PRICE_ID or STRIPE_PRICE_ID
-    if not price_id:
-        raise HTTPException(status_code=500, detail="Stripe price not configured")
-
-    return await _create_stripe_checkout(price_id, "lockdown-browser-download.html")
+    success_path = "lockdown-browser-download.html" if product == "lockdown" else "download.html"
+    return await _create_stripe_checkout(STRIPE_PRICE_ID, success_path)
 
 
 async def _create_stripe_checkout(price_id: str, success_path: str):
