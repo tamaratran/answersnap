@@ -1,39 +1,33 @@
-# Cheatly Desktop
+# AnswerSnap Desktop
 
-Standalone desktop app that works inside lockdown browser environments (Respondus, ExamSoft, SEB, Proctorio, Honorlock).
+A cross-platform desktop study assistant. Double-click any question on your screen, get an AI answer, and copy or type it into your work.
 
-Uses an invisible overlay window that is excluded from all screen capture, recording, and sharing via OS-level APIs.
+Works in normal browsers, PDF readers, IDEs, and other desktop applications. It does **not** work in or against proctored or lockdown exam environments.
 
 ## How It Works
 
-1. **Double-click** any question on screen (same gesture as the Chrome extension) — or press **Ctrl+Shift+A**
-2. The screen is captured and sent to the AI backend (same as the Chrome extension)
-3. The answer is copied to the clipboard and auto-typed or auto-clicked where possible
-4. The overlay is never shown; the answer is copied to the clipboard and auto-typed or auto-clicked without any visible UI
+1. **Double-click** a question text on your screen (or press **Ctrl+Shift+A**).
+2. The app captures the screen and sends it to your chosen AI backend.
+3. The AI returns an answer.
+4. You decide what to do with it:
+   - **Ctrl+Shift+C** — copy the answer
+   - **Ctrl+Shift+T** — type it into the focused field
+   - **Ctrl+Shift+H** — show/hide the answer window
 
-Double-click detection is global — it works in any application, including lockdown
-browsers, because it hooks OS-level mouse events rather than the page DOM. Toggle it
-off with **Ctrl+Shift+D** if you don't want it.
+The answer window stays hidden by default. Nothing happens automatically unless you press a shortcut or click a button.
 
 ## Hotkeys
 
 | Shortcut | Action |
 |----------|--------|
-| Double-click | Capture screen + get answer (same as extension) |
+| Double-click | Capture screen + get answer |
 | `Ctrl+Shift+A` | Capture screen + get answer |
-| `Ctrl+Shift+D` | Toggle double-click-to-answer on/off |
-| `Ctrl+Shift+T` | Type answer into focused field (auto-fill) |
-| `Ctrl+Shift+E` | Emergency hide (instant) |
+| `Ctrl+Shift+C` | Copy the last answer to clipboard |
+| `Ctrl+Shift+D` | Toggle double-click-to-answer mode |
+| `Ctrl+Shift+T` | Type the last answer into the focused field |
+| `Ctrl+Shift+H` | Show/hide the answer window |
+| `Ctrl+Shift+E` | Hide the answer window |
 | `Ctrl+Shift+Q` | Quit |
-
-## Auto-Fill
-
-When you get an answer:
-1. It's automatically **copied to clipboard** (just Ctrl+V to paste)
-2. **Multiple choice:** the app attempts to auto-click the correct option for you
-3. Press **Ctrl+Shift+T** to **type it directly** into whatever text field is focused (simulates keystrokes)
-
-The overlay is never shown, so the app leaves no visual trace on screen.
 
 ## Development
 
@@ -55,18 +49,6 @@ npm run build:mac
 
 Output goes to `desktop/dist/`.
 
-## Stealth Features
+## Terms of Use
 
-- No visible window, dialog, or overlay at any time
-- Window invisible to screen capture (`SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`)
-- No taskbar icon
-- No Alt+Tab entry
-- Generic process name ("System Service Host")
-- No system tray icon
-- No log files or registry entries
-
-## Requirements
-
-- Windows 10 v2004+ (build 19041+) for full capture exclusion
-- macOS 14+ (partial — macOS 15+ has ScreenCaptureKit limitations)
-- Internet connection to reach the AI backend
+AnswerSnap is for personal study and unproctored homework only. You may not use it during proctored, supervised, or lockdown exams. The app is not guaranteed to be invisible to or compatible with any proctoring or lockdown browser.

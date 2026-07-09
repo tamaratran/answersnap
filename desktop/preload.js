@@ -1,5 +1,5 @@
 /**
- * Cheatly Desktop — Preload Script
+ * AnswerSnap Desktop — Preload Script
  *
  * Exposes a safe IPC bridge between the renderer and main process.
  */
@@ -15,5 +15,11 @@ contextBridge.exposeInMainWorld("cheatly", {
   },
   setIgnoreMouse: (ignore) => {
     ipcRenderer.send("set-ignore-mouse", ignore);
+  },
+  acceptTerms: () => {
+    ipcRenderer.send("accept-terms");
+  },
+  declineTerms: () => {
+    ipcRenderer.send("decline-terms");
   },
 });
