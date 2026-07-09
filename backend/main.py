@@ -26,7 +26,7 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
 LANDING_URL = os.environ.get("LANDING_URL", "https://cheatly.io")
-STRIPE_CHECKOUT_URL = "https://api.stripe.com/v1/checkout/sessions"
+STRIPE_CHECKOUT_URL = os.environ.get("STRIPE_CHECKOUT_URL", "https://api.stripe.com/v1/checkout/sessions")
 
 
 class AnswerRequest(BaseModel):
