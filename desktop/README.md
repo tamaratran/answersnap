@@ -40,6 +40,9 @@ npm start
 ## Build
 
 ```bash
+# Linux (AppImage + .deb)
+npm run build:linux
+
 # Windows installer + portable
 npm run build:win
 
@@ -47,7 +50,33 @@ npm run build:win
 npm run build:mac
 ```
 
-Output goes to `desktop/dist/`.
+Output goes to `desktop/dist/`:
+- Linux: `answersnap-desktop-<version>-<arch>.AppImage` and `.deb`
+- Windows: `.exe` installer and portable `.exe`
+- macOS: `.dmg`
+
+## Install
+
+**From source:**
+
+```bash
+cd desktop
+npm install
+npm start
+```
+
+**Linux users** can install the `.deb` or run the AppImage:
+
+```bash
+# .deb
+sudo dpkg -i dist/answersnap-desktop-1.0.0-amd64.deb
+
+# AppImage
+chmod +x dist/answersnap-desktop-1.0.0-x86_64.AppImage
+./dist/answersnap-desktop-1.0.0-x86_64.AppImage
+```
+
+**Windows and macOS** users can run the installer from `dist/`. On macOS, the app may need to be signed/notarized before Gatekeeper will allow it to open.
 
 ## Terms of Service
 
