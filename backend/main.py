@@ -86,10 +86,12 @@ def build_prompt(selected_text: str, click_x: int = -1, click_y: int = -1) -> st
         "- IGNORE any pre-selected/highlighted radio button in the screenshot; "
         "compute the answer from the question text, not from what is already selected.\n"
         "- Be careful with derivative rules (the variable is x unless otherwise stated):\n"
+        "  * y = x^2  -> 2x     (power rule: d/dx[x^n] = n*x^(n-1); keep the variable)\n"
         "  * y = x^9  -> 9x^8   (power rule: d/dx[x^n] = n*x^(n-1))\n"
         "  * y = 5^9  -> 0      (constant: 5^9 is just a number, no x variable, so derivative is 0)\n"
         "  * y = 5^x  -> 5^x*ln(5) (exponential: d/dx[a^x] = a^x*ln(a))\n"
         "  * Do not treat 5^9 as if it were x^9. The base must be the variable x to use the power rule.\n"
+        "  * Do not drop variables. The derivative of x^2 is 2x, not 2.\n"
         "- Be direct. No preamble or explanation unless the question asks for it.\n"
         '- If you cannot determine the answer with confidence, say "Uncertain: " '
         "followed by your best guess."
