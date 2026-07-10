@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import os
@@ -269,12 +270,26 @@ def _subscription_period_end(sub) -> str:
     return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
 
 
+SUB_CACHE_TTL_SECONDS = 300
+_sub_cache: dict = {}
+
+
+def invalidate_subscription_cache(stripe_customer_id: str):
+    _sub_cache.pop(stripe_customer_id, None)
+
+
 async def check_stripe_subscription(stripe_customer_id: str) -> dict:
     if not stripe_customer_id or not STRIPE_SECRET_KEY:
         return {"subscribed": False, "trial": False, "plan": "", "current_period_end": ""}
 
+    cached = _sub_cache.get(stripe_customer_id)
+    if cached and time.time() - cached[0] < SUB_CACHE_TTL_SECONDS:
+        return cached[1]
+
     try:
-        subs = stripe.Subscription.list(customer=stripe_customer_id, status="all", limit=5)
+        subs = await asyncio.to_thread(
+            stripe.Subscription.list, customer=stripe_customer_id, status="all", limit=5
+        )
         for sub in subs.data:
             if sub.status in ("active", "trialing"):
                 is_trial = sub.status == "trialing"
@@ -285,21 +300,28 @@ async def check_stripe_subscription(stripe_customer_id: str) -> dict:
                     amount = price.unit_amount / 100 if price.unit_amount else 0
                     interval = price.recurring.interval if price.recurring else ""
                     plan_name = f"${amount:.0f}/{interval}"
-                return {
+                result = {
                     "subscribed": True,
                     "trial": is_trial,
                     "plan": plan_name,
                     "current_period_end": period_end,
                     "cancel_at_period_end": bool(sub.cancel_at_period_end),
                 }
-        return {"subscribed": False, "trial": False, "plan": "", "current_period_end": "", "cancel_at_period_end": False}
+                _sub_cache[stripe_customer_id] = (time.time(), result)
+                return result
+        result = {"subscribed": False, "trial": False, "plan": "", "current_period_end": "", "cancel_at_period_end": False}
+        _sub_cache[stripe_customer_id] = (time.time(), result)
+        return result
     except stripe.StripeError:
+        # Don't cache errors
         return {"subscribed": False, "trial": False, "plan": "", "current_period_end": "", "cancel_at_period_end": False}
 
 
 async def _active_subscription_id(stripe_customer_id: str) -> Optional[str]:
     """Return the id of the customer's active/trialing subscription, if any."""
-    subs = stripe.Subscription.list(customer=stripe_customer_id, status="all", limit=5)
+    subs = await asyncio.to_thread(
+        stripe.Subscription.list, customer=stripe_customer_id, status="all", limit=5
+    )
     for sub in subs.data:
         if sub.status in ("active", "trialing"):
             return sub.id
@@ -470,9 +492,11 @@ async def cancel_subscription(request: Request):
         sub_id = await _active_subscription_id(customer_id)
         if not sub_id:
             raise HTTPException(status_code=404, detail="No active subscription to cancel")
-        stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
+        await asyncio.to_thread(stripe.Subscription.modify, sub_id, cancel_at_period_end=True)
     except stripe.StripeError as e:
         raise HTTPException(status_code=502, detail=f"Stripe error: {str(e)}")
+
+    invalidate_subscription_cache(customer_id)
 
     sub_info = await check_stripe_subscription(customer_id)
     rate_info = await check_rate_limit(email)
@@ -500,9 +524,11 @@ async def resume_subscription(request: Request):
         sub_id = await _active_subscription_id(customer_id)
         if not sub_id:
             raise HTTPException(status_code=404, detail="No active subscription")
-        stripe.Subscription.modify(sub_id, cancel_at_period_end=False)
+        await asyncio.to_thread(stripe.Subscription.modify, sub_id, cancel_at_period_end=False)
     except stripe.StripeError as e:
         raise HTTPException(status_code=502, detail=f"Stripe error: {str(e)}")
+
+    invalidate_subscription_cache(customer_id)
 
     sub_info = await check_stripe_subscription(customer_id)
     rate_info = await check_rate_limit(email)
