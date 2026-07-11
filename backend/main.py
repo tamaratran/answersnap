@@ -561,7 +561,8 @@ def build_prompt(selected_text: str) -> str:
         "Your job:\n"
         "1. Identify the SINGLE question closest to where the user double-clicked.\n"
         "2. Read the question AND all answer choices very carefully.\n"
-        "3. Reason through the problem step by step inside <reasoning> tags.\n"
+        "3. Reason through the problem inside <reasoning> tags. Keep it BRIEF: "
+        "only the key calculation or logic in 2-3 short sentences, no restating the question.\n"
         "4. After reasoning, output your final answer inside <answer> tags.\n\n"
         "Format rules:\n"
         '- For multiple choice: return ONLY the letter and text, e.g. <answer>C. 2x + 2</answer>\n'
@@ -572,7 +573,7 @@ def build_prompt(selected_text: str) -> str:
         "- Answer ONLY ONE question \u2014 the one nearest to the user's click.\n\n"
         "IMPORTANT:\n"
         "- Read EVERY answer option before choosing. Do not pick the first plausible one.\n"
-        "- For math: show your work in <reasoning>. Double-check arithmetic.\n"
+        "- For math: do the key calculation in <reasoning>. Double-check arithmetic.\n"
         "- For science: apply the correct formula or principle.\n"
         "- If the question shows a graph, table, or diagram, analyze it carefully.\n"
         "- NEVER guess. If you are unsure, reason more carefully.\n\n"
