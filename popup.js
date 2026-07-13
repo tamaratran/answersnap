@@ -110,10 +110,12 @@ async function checkSubscription(token) {
     const resp = await fetch(`${BACKEND_URL}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!resp.ok) return null;
-    return await resp.json();
+    if (resp.status === 401) return { invalidToken: true };
+    if (!resp.ok) return { unavailable: true };
+    return { data: await resp.json() };
   } catch {
-    return null;
+    // Network error / backend cold start — token may still be valid
+    return { unavailable: true };
   }
 }
 
@@ -179,15 +181,18 @@ async function loadAuthState() {
     return;
   }
 
-  const subInfo = await checkSubscription(authToken);
-  if (!subInfo) {
-    // Token expired or invalid
+  const result = await checkSubscription(authToken);
+  if (result.invalidToken) {
     await chrome.storage.local.remove(["authToken", "authEmail"]);
     showAuthView();
     return;
   }
 
-  showMainView(authEmail || subInfo.email, subInfo);
+  // On network/server errors keep the session and show cached identity
+  const subInfo = result.unavailable
+    ? { subscribed: true, plan: "Reconnecting\u2026" }
+    : result.data;
+  showMainView(authEmail || subInfo.email || "", subInfo);
 
   // Load settings
   chrome.runtime.sendMessage({ type: "GET_SETTINGS" }, (settings) => {
