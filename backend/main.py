@@ -69,32 +69,13 @@ def build_prompt(selected_text: str, click_x: int = -1, click_y: int = -1) -> st
         context_hint = "\n\n".join(hints) + "\n\n"
 
     return (
-        f"{context_hint}You are an expert tutor solving exam/quiz questions from a "
-        "screenshot.\n\n"
-        "Your job:\n"
-        "1. Identify the ONE question that the user double-clicked.\n"
-        "2. Determine the correct answer for ONLY that one question.\n"
-        "3. Return ONLY the answer in a concise format.\n\n"
-        "Rules:\n"
-        '- For multiple choice: return the correct answer text followed by "(option N)" '
-        "where N is the position of the correct option counting from the top "
-        '(1 for the first/topmost option, 2 for the next, etc.). Example: "9x^8 (option 2)".\n'
-        '- For multiple select: return all correct options, e.g. "A, C"\n'
-        "- For fill-in-the-blank: return just the answer value\n"
-        "- For short answer / essay: provide a concise but complete answer\n"
-        "- Answer ONLY ONE question.\n"
-        "- IGNORE any pre-selected/highlighted radio button in the screenshot; "
-        "compute the answer from the question text, not from what is already selected.\n"
-        "- Be careful with derivative rules (the variable is x unless otherwise stated):\n"
-        "  * y = x^2  -> 2x     (power rule: d/dx[x^n] = n*x^(n-1); keep the variable)\n"
-        "  * y = x^9  -> 9x^8   (power rule: d/dx[x^n] = n*x^(n-1))\n"
-        "  * y = 5^9  -> 0      (constant: 5^9 is just a number, no x variable, so derivative is 0)\n"
-        "  * y = 5^x  -> 5^x*ln(5) (exponential: d/dx[a^x] = a^x*ln(a))\n"
-        "  * Do not treat 5^9 as if it were x^9. The base must be the variable x to use the power rule.\n"
-        "  * Do not drop variables. The derivative of x^2 is 2x, not 2.\n"
-        "- Be direct. No preamble or explanation unless the question asks for it.\n"
-        '- If you cannot determine the answer with confidence, say "Uncertain: " '
-        "followed by your best guess."
+        f"{context_hint}You are answering the question that was double-clicked.\n"
+        "1. List the options below the question, numbered 1, 2, 3... including any 'None of these' option.\n"
+        "2. Determine the correct answer.\n"
+        "3. Return the final answer on a single line in the exact format:\n"
+        '   "Answer: <answer> (option <number>)"\n'
+        "Derivative rules: d/dx[x^n] = n*x^(n-1); d/dx[a^x] = a^x*ln(a); if there is no x variable, derivative is 0.\n"
+        "No extra explanation."
     )
 
 
@@ -102,7 +83,9 @@ def crop_image(img: np.ndarray, click_x: int, click_y: int, above: int, below: i
     """Return a crop around (click_x, click_y) plus the crop's top-left offset."""
     h, w = img.shape[:2]
     crop_height = above + below
-    x1 = max(0, min(click_x - width // 2, w - width))
+    # Anchor the crop with more space to the left of the click so the question
+    # text, radio buttons, and option labels are fully visible.
+    x1 = max(0, min(click_x - (width * 3 // 4), w - width))
     y1 = max(0, min(click_y - above, h - crop_height))
     x2 = min(w, x1 + width)
     y2 = min(h, y1 + crop_height)
@@ -122,7 +105,9 @@ def crop_screenshot(data_url: str, click_x: int, click_y: int) -> str:
     if img is None:
         return data_url
 
-    crop, _, _ = crop_image(img, click_x, click_y, above=60, below=360, width=700)
+    # Tight crop around the double-click. The left-anchored x1 keeps the
+    # question text and options in view while excluding the previous question.
+    crop, _, _ = crop_image(img, click_x, click_y, above=20, below=260, width=900)
     ok, buf = cv2.imencode(".png", crop)
     if not ok:
         return data_url
@@ -161,7 +146,7 @@ async def get_answer(req: AnswerRequest):
                 ],
             }
         ],
-        "max_tokens": 1024,
+        "max_tokens": 120,
     }
 
     async with httpx.AsyncClient(timeout=60.0) as client:
@@ -182,15 +167,24 @@ async def get_answer(req: AnswerRequest):
         raise HTTPException(status_code=resp.status_code, detail=detail)
 
     data = resp.json()
-    answer = data["choices"][0]["message"]["content"].strip()
+    raw = data["choices"][0]["message"]["content"].strip()
 
-    # Parse out a "(option N)" hint that helps the desktop app click the right radio button.
+    # Parse the final answer line in the expected "Answer: <answer> (option <N>)" format.
+    answer = raw
     option_index = 0
-    match = re.search(r"\(option\s+(\d+)\)", answer, re.IGNORECASE)
-    if match:
-        option_index = int(match.group(1))
-        # Remove the marker from the user-facing answer text.
-        answer = re.sub(r"\(option\s+\d+\)", "", answer, flags=re.IGNORECASE).strip()
+    final_match = re.search(
+        r"Answer:\s*(.+?)\s*\(option\s+(\d+)\)", raw, re.IGNORECASE
+    )
+    if final_match:
+        answer = final_match.group(1).strip()
+        option_index = int(final_match.group(2))
+    else:
+        # Fallback: search anywhere for an "(option N)" marker.
+        match = re.search(r"\(option\s+(\d+)\)", raw, re.IGNORECASE)
+        if match:
+            option_index = int(match.group(1))
+            answer = re.sub(r"\(option\s+\d+\)", "", raw, flags=re.IGNORECASE).strip()
+
     # Strip surrounding quotes if the model wrapped the answer in them.
     if len(answer) >= 2 and (
         (answer[0] == '"' and answer[-1] == '"')
@@ -225,165 +219,118 @@ async def locate_answer(req: LocateRequest):
     if cv_img is None:
         raise HTTPException(status_code=422, detail="Could not decode screenshot")
 
-    # Crop around the click so we only look at the options for the
-    # question the user double-clicked.
+    # Crop a larger region around the click so the first option and the
+    # full option list for the clicked question are visible.
     crop, crop_x1, crop_y1 = crop_image(
-        cv_img, req.clickX, req.clickY, above=50, below=300, width=700
+        cv_img, req.clickX, req.clickY, above=120, below=350, width=1200
     )
-    crop_h, crop_w = crop.shape[:2]
     crop_gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
-    # Detect circles (radio buttons are small circles, radius 5-15px)
-    circles = cv2.HoughCircles(
-        crop_gray, cv2.HOUGH_GRADIENT, dp=1, minDist=18,
-        param1=50, param2=13, minRadius=6, maxRadius=16
+    # Detect radio buttons by looking for small ring-like contours. An
+    # unselected radio button is an outer circle with a child hole in the
+    # middle; this is more robust than HoughCircles for thin or low-contrast
+    # rings.
+    thresh = cv2.adaptiveThreshold(
+        crop_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV, 25, 15
     )
+    contours, hierarchy = cv2.findContours(
+        thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    points = []
+    if hierarchy is not None and len(hierarchy) > 0:
+        for i, cnt in enumerate(contours):
+            if cnt.shape[0] < 5:
+                continue
+            area = cv2.contourArea(cnt)
+            if area < 50 or area > 200:
+                continue
+            (cx, cy), r = cv2.minEnclosingCircle(cnt)
+            if r < 4 or r > 10:
+                continue
+            peri = cv2.arcLength(cnt, True)
+            if peri == 0:
+                continue
+            circularity = 4 * np.pi * area / (peri * peri)
+            if circularity < 0.8:
+                continue
+            # A radio ring has an inner hole (child contour).
+            child = int(hierarchy[0][i][2])
+            if child == -1:
+                continue
+            points.append((float(cx), float(cy)))
 
     x, y = None, None
     confidence = "low"
-    best_group = None
+    best = None
     best_score = -1e9
 
-    if circles is not None:
-        all_circles = np.uint16(np.around(circles[0]))
+    # Vertical spacing between option rows. The first option's radio center is
+    # roughly text_top + 44 + 6.5; assuming the double-click lands in the
+    # middle of the question text, we search for the first option row around
+    # click_y + 40.5. A small climb-up step then locks onto the first row.
+    DEFAULT_SPACING = 29
+    FIRST_RADIO_OFFSET = 40.5
 
-        # Radio buttons sit at the start of a label:
-        #   - uniform background immediately to the left
-        #   - option text immediately to the right
-        # Letter glyphs (e.g. "0", "o") have neighbouring letters on at
-        # least one side.
-        radio_circles = []
-        for cx, cy, cr in all_circles:
-            cx, cy, cr = int(cx), int(cy), int(cr)
-            y0 = max(0, cy - cr)
-            y1 = min(crop_h, cy + cr)
-            if y1 <= y0:
-                continue
-
-            # Left of the circle should be background
-            x_left0 = max(0, cx - 4 * cr)
-            x_left1 = max(0, cx - 2 * cr)
-            if x_left1 <= x_left0:
-                continue
-            left_strip = crop_gray[y0:y1, x_left0:x_left1]
-            if left_strip.size == 0:
-                continue
-            if left_strip.std() > 10:
-                continue
-
-            # Right of the circle should contain label text (non-uniform)
-            x_right0 = min(crop_w, cx + 2 * cr)
-            x_right1 = min(crop_w, cx + 5 * cr)
-            if x_right1 <= x_right0:
-                continue
-            right_strip = crop_gray[y0:y1, x_right0:x_right1]
-            if right_strip.size == 0 or right_strip.std() < 12:
-                continue
-
-            radio_circles.append((cx, cy, cr))
-
-        # Find vertical groups of radio circles (same x ± 8px, consistent spacing)
-        x_groups = {}
-        for cx, cy, cr in radio_circles:
-            bucket = int(cx) // 8 * 8
-            if bucket not in x_groups:
-                x_groups[bucket] = []
-            x_groups[bucket].append((int(cx), int(cy), int(cr)))
-
-        def group_score(run, click_x, click_y, crop_h, option_index):
-            n = len(run)
-            spacings = [run[k+1][1] - run[k][1] for k in range(n - 1)]
-            if not spacings:
-                return -1e9
-            avg = sum(spacings) / len(spacings)
-            max_dev = max(abs(s - avg) for s in spacings)
-            if avg < 25 or avg > 60:
-                return -1e9
-            if max_dev / avg > 0.35:
-                return -1e9
-
-            # Options should be below the click, and the whole run should fit
-            # in the crop (which only shows this question's options).
-            top = run[0][1]
-            bottom = run[-1][1]
-            col_x = sum(c[0] for c in run) / n
-
-            # Prefer the column that is roughly under the question text and
-            # to its left (radio buttons are left of option text).
-            horiz_score = -abs(col_x - click_x + 90)
-
-            # Prefer the run that starts closest to (just below) the click.
-            vert_score = -abs(top - rel_click_y)
-
-            # Length, consistent spacing, and containment.
-            length_score = n * 15
-            spacing_score = -max_dev
-            containment = 0
-            if req.optionIndex > 0 and option_index <= n:
-                containment = 10
-
-            return length_score + spacing_score + horiz_score + vert_score + containment
-
-        best_group = None
-        best_score = -1e9
-        sorted_buckets = sorted(x_groups.keys())
-        rel_click_x = req.clickX - crop_x1
-        rel_click_y = req.clickY - crop_y1
-
-        for i, bucket in enumerate(sorted_buckets):
-            merged = list(x_groups[bucket])
-            for j in range(i + 1, len(sorted_buckets)):
-                if sorted_buckets[j] - bucket <= 5:
-                    merged.extend(x_groups[sorted_buckets[j]])
-                else:
+    if points:
+        # Group detections by x coordinate; the leftmost vertical column with
+        # consistent ~29 px spacing is the radio-button column.
+        groups = []
+        for px, py in points:
+            placed = False
+            for g in groups:
+                if abs(g[0][0] - px) <= 15:
+                    g.append((px, py))
+                    placed = True
                     break
+            if not placed:
+                groups.append([(px, py)])
 
-            if len(merged) < 3:
+        for g in groups:
+            if len(g) < 2:
                 continue
-
-            merged.sort(key=lambda c: c[1])
-            radii = [c[2] for c in merged]
-            if max(radii) - min(radii) > 6:
+            ys = sorted(p[1] for p in g)
+            diffs = [ys[i + 1] - ys[i] for i in range(len(ys) - 1)]
+            avg = float(np.median(diffs))
+            if avg < 25 or avg > 60:
                 continue
+            g_x = float(np.median([p[0] for p in g]))
+            # Prefer the leftmost radio column with the most rows.
+            score = len(g) * 100 - g_x
+            if score > best_score:
+                best_score = score
+                best = {"g": g, "avg": avg, "x": g_x}
 
-            # Find the best contiguous run of 3+ circles
-            for start in range(len(merged) - 2):
-                for end in range(len(merged), start + 2, -1):
-                    run = merged[start:end]
-                    score = group_score(run, rel_click_x, rel_click_y, crop_h, req.optionIndex)
-                    if score > best_score:
-                        best_score = score
-                        best_group = run
-
-        if best_group and best_score > -1e8:
-            n = len(best_group)
-            avg_spacing = sum(best_group[k+1][1] - best_group[k][1] for k in range(n - 1)) / (n - 1)
-
-            if req.optionIndex > 0 and req.optionIndex <= n:
-                idx = req.optionIndex - 1
-                x = best_group[idx][0] + crop_x1
-                y = best_group[idx][1] + crop_y1
-                confidence = "high"
+    if best:
+        ys = sorted(p[1] for p in best["g"])
+        avg = best["avg"]
+        expected = req.clickY + FIRST_RADIO_OFFSET - crop_y1
+        # Pick the row closest to where the first option should be.
+        first_y = float(min(ys, key=lambda y: abs(y - expected)))
+        # Climb up to the real first option row (handles a double-click that
+        # landed low or an option 0 that is missing/selected).
+        while True:
+            prev = first_y - avg
+            if any(abs(y - prev) <= avg * 0.35 for y in ys):
+                first_y = prev
             else:
-                # Try to infer from answer letter; fall back to best column top.
-                target_letter = req.answer.strip()[0].upper()
-                target_idx = ord(target_letter) - ord('A')
+                break
 
-                if 0 <= target_idx < n:
-                    x = best_group[target_idx][0] + crop_x1
-                    y = best_group[target_idx][1] + crop_y1
-                    confidence = "high"
-                else:
-                    x = best_group[0][0] + crop_x1
-                    y = best_group[0][1] + crop_y1
-                    confidence = "medium"
+        target_y = first_y + crop_y1 + (req.optionIndex - 1) * avg
+        target_x = best["x"] + crop_x1
+        if req.clickY + 30 <= target_y <= req.clickY + 300:
+            x = int(round(target_x))
+            y = int(round(target_y))
+            confidence = "high" if len(ys) >= 4 else "medium"
 
-    # Fallback using geometry when CV does not find a good group.
-    if x is None or y is None:
-        if req.optionIndex > 0:
-            x = max(0, req.clickX - 100)
-            y = req.clickY + 60 + (req.optionIndex - 1) * 40
-            confidence = "low"
+    if x is None and req.optionIndex > 0:
+        # Fallback to a geometry guess based on the click position. The first
+        # option is typically ~44 px below the question text and each option is
+        # ~29 px apart.
+        x = int(round(req.clickX - 100)) if req.clickX > 200 else 60
+        y = int(round(req.clickY + 50.5 + (req.optionIndex - 1) * DEFAULT_SPACING))
+        confidence = "low"
 
     if x is None or y is None:
         raise HTTPException(

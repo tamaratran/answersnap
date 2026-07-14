@@ -85,6 +85,8 @@ async function clickAtPosition(x, y) {
   try {
     const { Point } = require("@nut-tree-fork/nut-js");
     await mouse.setPosition(new Point(x, y));
+    // Give the OS cursor a moment to reach the target before clicking.
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await mouse.leftClick();
     return true;
   } catch (err) {
