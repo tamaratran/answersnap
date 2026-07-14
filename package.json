@@ -1,6 +1,6 @@
 {
   "name": "cheatly",
-  "version": "1.0.0",
+  "version": "1.3.2",
   "description": "AI-powered Chrome extension for instant answers. Double-click any question to get the answer.",
   "private": true,
   "type": "module",

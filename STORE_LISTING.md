@@ -46,6 +46,11 @@ Productivity
 ## Language
 English
 
+## URLs
+- Homepage / official website: https://cheatly.xyz
+- Privacy policy: https://cheatly.xyz/privacy-policy.html
+- Support: https://cheatly.xyz (or the GitHub repository issues page)
+
 ## Assets
 
 | Asset | File | Dimensions |

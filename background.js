@@ -3,11 +3,15 @@
  *
  * Handles:
  * 1. Screenshot capture via chrome.tabs.captureVisibleTab
- * 2. AI vision API call (OpenAI GPT-4o)
- * 3. Message routing between content script and popup
+ * 2. AI vision API call (OpenAI GPT-4.1)
+ * 3. Auth token management + subscription gating
+ * 4. Message routing between content script and popup
  */
 
 const BACKEND_URL = "https://cheatly-backend.fly.dev";
+
+const AUTO_DISABLE_ALARM = "auto-disable";
+const AUTO_DISABLE_MINUTES = 60; // 1 hour
 
 const DEFAULT_SETTINGS = {
   enabled: true,
@@ -21,28 +25,48 @@ async function getSettings() {
   return { ...DEFAULT_SETTINGS, ...result.settings };
 }
 
+async function getAuthToken() {
+  const result = await chrome.storage.local.get("authToken");
+  return result.authToken || null;
+}
+
 async function captureScreenshot() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new Error("No active tab found");
 
   const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-    format: "png",
-    quality: 90,
+    format: "jpeg",
+    quality: 80,
   });
   return dataUrl;
 }
 
 async function queryBackend(screenshotDataUrl, selectedText) {
+  const token = await getAuthToken();
+
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${BACKEND_URL}/answer`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       screenshot: screenshotDataUrl,
       selectedText: selectedText || "",
     }),
   });
+
+  if (response.status === 401) {
+    throw new Error("LOGIN_REQUIRED");
+  }
+  if (response.status === 403) {
+    throw new Error("SUBSCRIPTION_REQUIRED");
+  }
+  if (response.status === 429) {
+    throw new Error("RATE_LIMITED");
+  }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
@@ -78,8 +102,10 @@ async function handlePortMessage(message, port) {
         port.postMessage({ error: "Cheatly is disabled." });
         return;
       }
-      const screenshot = message.screenshot || await captureScreenshot();
+      // Capture screenshot here so it never round-trips through the content script
+      const screenshot = await captureScreenshot();
       const answer = await queryBackend(screenshot, message.selectedText);
+
       port.postMessage({ answer, displayMode: settings.displayMode });
     } else if (message.type === "GET_SETTINGS") {
       const settings = await getSettings();
@@ -102,11 +128,76 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === "SAVE_SETTINGS") {
-    chrome.storage.local.set({ settings: message.settings }).then(() => {
+    chrome.storage.local.set({ settings: message.settings }).then(async () => {
+      // Manage auto-disable timer on settings change from popup
+      if (message.settings.enabled) {
+        startAutoDisableTimer();
+        // Reset server-side session when user re-enables
+        await resetServerSession();
+      } else {
+        clearAutoDisableTimer();
+      }
       sendResponse({ ok: true });
     });
     return true;
   }
+});
+
+// ── Server Session Reset ────────────────────────────────────────────────────
+
+async function resetServerSession() {
+  const token = await getAuthToken();
+  if (!token) return;
+  try {
+    await fetch(`${BACKEND_URL}/auth/reset-session`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (_err) {
+    // Non-critical — server will start a new session on next /answer call
+  }
+}
+
+// ── Auto-Disable Timer ──────────────────────────────────────────────────────
+
+function startAutoDisableTimer() {
+  chrome.alarms.create(AUTO_DISABLE_ALARM, {
+    delayInMinutes: AUTO_DISABLE_MINUTES,
+  });
+}
+
+function clearAutoDisableTimer() {
+  chrome.alarms.clear(AUTO_DISABLE_ALARM);
+}
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== AUTO_DISABLE_ALARM) return;
+
+  const settings = await getSettings();
+  if (!settings.enabled) return; // Already off
+
+  settings.enabled = false;
+  await chrome.storage.local.set({ settings });
+
+  // Notify active tab so toast shows
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id) {
+    chrome.tabs.sendMessage(tab.id, {
+      type: "TOGGLE_STATE",
+      enabled: false,
+    }).catch(() => {});
+  }
+});
+
+// Start timer on install/startup if enabled
+chrome.runtime.onInstalled.addListener(async () => {
+  const settings = await getSettings();
+  if (settings.enabled) startAutoDisableTimer();
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  const settings = await getSettings();
+  if (settings.enabled) startAutoDisableTimer();
 });
 
 // ── Keyboard Shortcut ───────────────────────────────────────────────────────
@@ -116,6 +207,14 @@ chrome.commands.onCommand.addListener(async (command) => {
     const settings = await getSettings();
     settings.enabled = !settings.enabled;
     await chrome.storage.local.set({ settings });
+
+    // Manage auto-disable timer
+    if (settings.enabled) {
+      startAutoDisableTimer();
+      resetServerSession();
+    } else {
+      clearAutoDisableTimer();
+    }
 
     const [tab] = await chrome.tabs.query({
       active: true,

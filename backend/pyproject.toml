@@ -7,4 +7,10 @@ dependencies = [
     "uvicorn[standard]",
     "httpx",
     "pydantic",
+    "opencv-python-headless",
+    "numpy",
+    "bcrypt",
+    "PyJWT",
+    "aiosqlite",
+    "stripe",
 ]

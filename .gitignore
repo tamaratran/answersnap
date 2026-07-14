@@ -4,3 +4,4 @@ dist/
 *.crx
 *.pem
 *.zip
+!landing/cheatly-extension.zip

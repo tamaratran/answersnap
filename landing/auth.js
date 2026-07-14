@@ -1,42 +1,83 @@
-/**
- * Cheatly — shared auth helpers (talks to the Cheatly API with cookie sessions)
- */
-const API_BASE = "https://cheatly-backend.fly.dev";
+(function () {
+  var KEY = "cheatly_token";
+  var API_BASE = "https://cheatly-backend.fly.dev";
 
-async function api(path, options = {}) {
-  const resp = await fetch(API_BASE + path, {
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    throw new Error(data.detail || "Something went wrong. Please try again.");
-  }
-  return data;
-}
-
-function bindAuthForm(formId, endpoint) {
-  const form = document.getElementById(formId);
-  if (!form) return;
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const errorEl = form.querySelector(".form-error");
-    const button = form.querySelector("button[type=submit]");
-    errorEl.textContent = "";
-    button.disabled = true;
+  function expOf(t) {
     try {
-      await api(endpoint, {
-        method: "POST",
-        body: JSON.stringify({
-          email: form.email.value,
-          password: form.password.value,
-        }),
-      });
-      window.location.href = "dashboard.html";
-    } catch (err) {
-      errorEl.textContent = err.message;
-      button.disabled = false;
+      var payload = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      var claims = JSON.parse(atob(payload));
+      return typeof claims.exp === "number" ? claims.exp : null;
+    } catch (_) {
+      return null;
     }
-  });
-}
+  }
+
+  window.CheatlyAuth = {
+    get: function () {
+      var t = localStorage.getItem(KEY);
+      if (!t) return null;
+      var exp = expOf(t);
+      if (exp && exp * 1000 < Date.now()) {
+        localStorage.removeItem(KEY);
+        return null;
+      }
+      return t;
+    },
+    set: function (t) {
+      if (t) localStorage.setItem(KEY, t);
+    },
+    clear: function () {
+      localStorage.removeItem(KEY);
+    },
+  };
+
+  window.api = async function (path, options) {
+    options = options || {};
+    var headers = { "Content-Type": "application/json" };
+    var token = window.CheatlyAuth ? window.CheatlyAuth.get() : null;
+    if (token) headers.Authorization = "Bearer " + token;
+
+    var resp = await fetch(API_BASE + path, {
+      method: options.method || "GET",
+      credentials: "same-origin",
+      headers: headers,
+      body: options.body,
+    });
+
+    var data = {};
+    try {
+      data = await resp.json();
+    } catch (_) {}
+
+    if (!resp.ok) {
+      throw new Error(data.detail || "Something went wrong. Please try again.");
+    }
+    return data;
+  };
+
+  window.bindAuthForm = function (formId, endpoint) {
+    var form = document.getElementById(formId);
+    if (!form) return;
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var errorEl = form.querySelector(".form-error");
+      var button = form.querySelector("button[type=submit]");
+      if (errorEl) errorEl.textContent = "";
+      if (button) button.disabled = true;
+      try {
+        var data = await window.api(endpoint, {
+          method: "POST",
+          body: JSON.stringify({
+            email: form.email.value,
+            password: form.password.value,
+          }),
+        });
+        if (data.token && window.CheatlyAuth) window.CheatlyAuth.set(data.token);
+        window.location.href = "dashboard.html";
+      } catch (err) {
+        if (errorEl) errorEl.textContent = err.message;
+        if (button) button.disabled = false;
+      }
+    });
+  };
+})();

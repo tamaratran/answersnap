@@ -38,7 +38,7 @@
             <span class="price-new">$9.99</span>
             <span class="price-period">/week</span>
           </div>
-          <a href="https://cheatly-backend.fly.dev/checkout" class="btn btn-primary btn-block">Subscribe to Cheatly Pro</a>
+          <a href="https://cheatly-backend.fly.dev/checkout" id="checkout-link" class="btn btn-primary btn-block">Subscribe to Cheatly Pro</a>
           <p class="auth-switch">Cancel anytime. Satisfaction guaranteed.</p>
         </div>
 
@@ -60,6 +60,8 @@
       try {
         const me = await api("/api/me");
         document.getElementById("user-email").textContent = me.email;
+        document.getElementById("checkout-link").href =
+          "https://cheatly-backend.fly.dev/checkout?email=" + encodeURIComponent(me.email);
         if (me.subscribed) {
           document.getElementById("status-line").textContent = "You're all set.";
           document.getElementById("subscribed").classList.remove("hidden");
@@ -76,7 +78,8 @@
     })();
     document.getElementById("logout-link").addEventListener("click", async (e) => {
       e.preventDefault();
-      await api("/api/logout", { method: "POST" });
+      try { await api("/api/logout", { method: "POST" }); } catch (_) {}
+      if (window.CheatlyAuth) CheatlyAuth.clear();
       window.location.href = "index.html";
     });
   </script>
