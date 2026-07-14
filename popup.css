@@ -231,6 +231,10 @@ body {
   color: #dc2626;
 }
 
+.sub-badge.error {
+  color: #d97706;
+}
+
 .sub-detail {
   font-size: 11px;
   color: #64748b;

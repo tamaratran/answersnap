@@ -89,7 +89,7 @@ async function doAuth(endpoint, email, password, btnId) {
     await chrome.storage.local.set({ authToken: data.token, authEmail: data.email });
     chrome.runtime.sendMessage({ type: "AUTH_CHANGED" });
     await loadAuthState();
-  } catch (err) {
+  } catch (_err) {
     showAuthError("Network error — try again");
   } finally {
     btn.disabled = false;
@@ -110,7 +110,9 @@ async function checkSubscription(token) {
     const resp = await fetch(`${BACKEND_URL}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (resp.status === 401) return { invalidToken: true };
+    if (resp.status === 401 || resp.status === 403) {
+      return { invalidToken: true };
+    }
     if (!resp.ok) return { unavailable: true };
     return { data: await resp.json() };
   } catch {
@@ -119,7 +121,7 @@ async function checkSubscription(token) {
   }
 }
 
-// ── UI State ──────────────────────────────────────────────────────────────
+// ── UI State ──────────────────────────────────────────────
 
 function showAuthView() {
   authView.classList.remove("hidden");
@@ -136,6 +138,15 @@ function showMainView(email, subInfo) {
   shortcutHint.style.display = "";
 
   userEmailEl.textContent = email;
+
+  if (subInfo && subInfo._connectionError) {
+    subBadge.textContent = "Connection Error";
+    subBadge.className = "sub-badge error";
+    subDetail.textContent = "Could not reach Cheatly. Your login is saved — try again.";
+    subscribeCta.classList.add("hidden");
+    settingsSection.classList.remove("hidden");
+    return;
+  }
 
   if (subInfo && subInfo.subscribed) {
     const label = subInfo.trial ? "Free Trial" : "Active";
@@ -183,16 +194,17 @@ async function loadAuthState() {
 
   const result = await checkSubscription(authToken);
   if (result.invalidToken) {
+    // Token expired or invalid
     await chrome.storage.local.remove(["authToken", "authEmail"]);
     showAuthView();
     return;
   }
 
-  // On network/server errors keep the session and show cached identity
+  // On network/server errors keep the session and show a clear connection warning
   const subInfo = result.unavailable
-    ? { subscribed: true, plan: "Reconnecting\u2026" }
+    ? { _connectionError: true }
     : result.data;
-  showMainView(authEmail || subInfo.email || "", subInfo);
+  showMainView(authEmail || subInfo?.email || "", subInfo);
 
   // Load settings
   chrome.runtime.sendMessage({ type: "GET_SETTINGS" }, (settings) => {
