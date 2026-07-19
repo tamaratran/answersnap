@@ -45,6 +45,79 @@
       color: #6b7280;
       margin-top: 14px;
     }
+    .proof-section { max-width: 460px; margin: 26px auto 60px; }
+    .proof-banner {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+    .proof-banner strong { color: #059669; }
+    .proof-banner .proof-stars { color: #f59e0b; letter-spacing: 2px; font-size: 1rem; }
+    .proof-banner p { margin: 4px 0 0; color: #374151; font-size: 0.95rem; }
+    .grade-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      text-align: left;
+    }
+    .grade-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .grade-card-head .grade-course {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #111827;
+    }
+    .grade-card-head .grade-status {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #059669;
+      background: #ecfdf5;
+      border-radius: 999px;
+      padding: 2px 9px;
+    }
+    .grade-body { display: flex; align-items: center; gap: 16px; }
+    .grade-ring {
+      width: 74px; height: 74px; flex-shrink: 0;
+      border-radius: 50%;
+      border: 4px solid #10b981;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .grade-ring .grade-score { font-size: 1.35rem; font-weight: 800; color: #111827; line-height: 1; }
+    .grade-ring .grade-pts { font-size: 0.6rem; color: #6b7280; }
+    .grade-meta { flex: 1; }
+    .grade-meta .grade-out-of { font-size: 0.85rem; color: #374151; margin: 0 0 8px; }
+    .grade-dist {
+      position: relative; height: 4px; border-radius: 2px;
+      background: #e5e7eb; margin: 8px 0 4px;
+    }
+    .grade-dist .grade-dot {
+      position: absolute; right: -2px; top: -3px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #10b981;
+    }
+    .grade-dist-labels {
+      display: flex; justify-content: space-between;
+      font-size: 0.62rem; color: #9ca3af;
+    }
+    .grade-student {
+      display: flex; align-items: center; gap: 9px;
+      margin-top: 12px; padding-top: 10px;
+      border-top: 1px solid #f3f4f6;
+    }
+    .grade-avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
+    }
+    .grade-student-info { font-size: 0.78rem; color: #6b7280; line-height: 1.35; }
+    .grade-student-info b { color: #111827; }
   </style>
 </head>
 <body>
@@ -82,6 +155,79 @@
         </form>
 
         <p class="checkout-secure">🔒 Payments secured by Stripe. Your card won't be charged until your 7-day trial ends.</p>
+      </div>
+
+      <div class="proof-section">
+        <div class="proof-banner">
+          <div class="proof-stars">★★★★★</div>
+          <p>Serving <strong>10,000+ students worldwide</strong></p>
+        </div>
+
+        <div class="grade-card">
+          <div class="grade-card-head">
+            <span class="grade-course">BIO 201 — Final Exam</span>
+            <span class="grade-status">✓ Graded</span>
+          </div>
+          <div class="grade-body">
+            <div class="grade-ring">
+              <span class="grade-score">100</span>
+              <span class="grade-pts">Points</span>
+            </div>
+            <div class="grade-meta">
+              <p class="grade-out-of">Out of 100 pts</p>
+              <div class="grade-dist"><span class="grade-dot"></span></div>
+              <div class="grade-dist-labels"><span>Low: 42.0</span><span>Mean: 71.3</span><span>High: 100.0</span></div>
+            </div>
+          </div>
+          <div class="grade-student">
+            <span class="grade-avatar" style="background:#0ea5e9">JM</span>
+            <span class="grade-student-info"><b>Jasmine M.</b> — "First 100 I've ever gotten on a bio final."</span>
+          </div>
+        </div>
+
+        <div class="grade-card">
+          <div class="grade-card-head">
+            <span class="grade-course">STAT 1350 — Midterm 2</span>
+            <span class="grade-status">✓ Graded</span>
+          </div>
+          <div class="grade-body">
+            <div class="grade-ring">
+              <span class="grade-score">50</span>
+              <span class="grade-pts">Points</span>
+            </div>
+            <div class="grade-meta">
+              <p class="grade-out-of">Out of 50 pts</p>
+              <div class="grade-dist"><span class="grade-dot"></span></div>
+              <div class="grade-dist-labels"><span>Low: 18.0</span><span>Mean: 34.6</span><span>High: 50.0</span></div>
+            </div>
+          </div>
+          <div class="grade-student">
+            <span class="grade-avatar" style="background:#8b5cf6">DK</span>
+            <span class="grade-student-info"><b>Daniel K.</b> — "Went from a C+ average to top of the curve."</span>
+          </div>
+        </div>
+
+        <div class="grade-card">
+          <div class="grade-card-head">
+            <span class="grade-course">HIST 110 — Unit 4 Quiz</span>
+            <span class="grade-status">✓ Graded</span>
+          </div>
+          <div class="grade-body">
+            <div class="grade-ring">
+              <span class="grade-score">25</span>
+              <span class="grade-pts">Points</span>
+            </div>
+            <div class="grade-meta">
+              <p class="grade-out-of">Out of 25 pts</p>
+              <div class="grade-dist"><span class="grade-dot"></span></div>
+              <div class="grade-dist-labels"><span>Low: 9.0</span><span>Mean: 17.8</span><span>High: 25.0</span></div>
+            </div>
+          </div>
+          <div class="grade-student">
+            <span class="grade-avatar" style="background:#f97316">AR</span>
+            <span class="grade-student-info"><b>Aisha R.</b> — "Perfect score in under 4 minutes."</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>
