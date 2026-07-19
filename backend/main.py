@@ -27,6 +27,7 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 LANDING_URL = os.environ.get("LANDING_URL", "https://cheatly.io")
 STRIPE_CHECKOUT_URL = "https://api.stripe.com/v1/checkout/sessions"
@@ -1000,3 +1001,118 @@ async def api_me(request: Request):
 async def api_logout(request: Request):
     user = await get_current_user(request)
     return {"ok": True, "email": user["sub"]}
+
+
+# ── Custom paywall (embedded Stripe Payment Element) ────────────────────────
+
+
+async def _customer_id_for(email: str) -> str:
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT stripe_customer_id FROM users WHERE email = ?", (email,)
+        )
+        row = await cursor.fetchone()
+    finally:
+        await db.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+    customer_id = row[0]
+    if not customer_id:
+        customer = await asyncio.to_thread(stripe.Customer.create, email=email)
+        customer_id = customer.id
+        db = await get_db()
+        try:
+            await db.execute(
+                "UPDATE users SET stripe_customer_id = ? WHERE email = ?",
+                (customer_id, email),
+            )
+            await db.commit()
+        finally:
+            await db.close()
+    return customer_id
+
+
+@app.post("/api/subscribe/setup")
+async def subscribe_setup(request: Request):
+    """Create a SetupIntent so the custom paywall can collect a payment method."""
+    if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID or not STRIPE_PUBLISHABLE_KEY:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    user = await get_current_user(request)
+    email = user["sub"]
+    customer_id = await _customer_id_for(email)
+
+    sub_info = await check_stripe_subscription(customer_id)
+    if sub_info.get("subscribed"):
+        raise HTTPException(status_code=409, detail="Already subscribed")
+
+    try:
+        intent = await asyncio.to_thread(
+            stripe.SetupIntent.create,
+            customer=customer_id,
+            usage="off_session",
+            automatic_payment_methods={"enabled": True},
+        )
+    except stripe.StripeError as e:
+        raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
+
+    return {
+        "client_secret": intent.client_secret,
+        "publishable_key": STRIPE_PUBLISHABLE_KEY,
+        "email": email,
+    }
+
+
+class ActivateRequest(BaseModel):
+    setup_intent_id: str
+
+
+@app.post("/api/subscribe/activate", response_model=SubscriptionStatus)
+async def subscribe_activate(req: ActivateRequest, request: Request):
+    """Start the trial subscription with the payment method saved by the paywall."""
+    if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    user = await get_current_user(request)
+    email = user["sub"]
+    customer_id = await _customer_id_for(email)
+
+    try:
+        intent = await asyncio.to_thread(
+            stripe.SetupIntent.retrieve, req.setup_intent_id
+        )
+    except stripe.StripeError:
+        raise HTTPException(status_code=404, detail="Setup intent not found")
+
+    if intent.customer != customer_id:
+        raise HTTPException(status_code=403, detail="Setup intent does not belong to this account")
+    if intent.status != "succeeded" or not intent.payment_method:
+        raise HTTPException(status_code=400, detail="Payment method setup not completed")
+
+    sub_info = await check_stripe_subscription(customer_id)
+    if not sub_info.get("subscribed"):
+        try:
+            await asyncio.to_thread(
+                stripe.Customer.modify,
+                customer_id,
+                invoice_settings={"default_payment_method": intent.payment_method},
+            )
+            await asyncio.to_thread(
+                stripe.Subscription.create,
+                customer=customer_id,
+                items=[{"price": STRIPE_PRICE_ID}],
+                trial_period_days=7,
+                default_payment_method=intent.payment_method,
+                trial_settings={"end_behavior": {"missing_payment_method": "cancel"}},
+            )
+        except stripe.StripeError as e:
+            raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
+        invalidate_subscription_cache(customer_id)
+
+    sub_info = await check_stripe_subscription(customer_id)
+    rate_info = await check_rate_limit(email)
+    return SubscriptionStatus(
+        email=email,
+        rate_limited=rate_info["limited"],
+        session_minutes_remaining=rate_info["minutes_remaining"],
+        **sub_info,
+    )

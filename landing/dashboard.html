@@ -38,7 +38,7 @@
             <span class="price-new">$25</span>
             <span class="price-period">/month</span>
           </div>
-          <a href="https://cheatly-backend.fly.dev/checkout" id="checkout-link" class="btn btn-primary btn-block">Start Free Trial</a>
+          <a href="checkout.html" id="checkout-link" class="btn btn-primary btn-block">Start Free Trial</a>
           <p class="auth-switch">7-day free trial &bull; No charge today &bull; Cancel anytime</p>
         </div>
 
@@ -60,8 +60,6 @@
       try {
         const me = await api("/api/me");
         document.getElementById("user-email").textContent = me.email;
-        document.getElementById("checkout-link").href =
-          "https://cheatly-backend.fly.dev/checkout?email=" + encodeURIComponent(me.email);
         if (me.subscribed) {
           document.getElementById("status-line").textContent = "You're all set.";
           document.getElementById("subscribed").classList.remove("hidden");
