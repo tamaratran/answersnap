@@ -30,67 +30,6 @@
       color: #6b7280;
       margin-top: 12px;
     }
-    .checkout-proof {
-      margin-bottom: 18px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--border);
-      text-align: left;
-    }
-    .proof-head {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-    .proof-avatars { display: flex; }
-    .proof-avatars .proof-avatar { margin-left: -8px; border: 2px solid var(--bg-card); }
-    .proof-avatars .proof-avatar:first-child { margin-left: 0; }
-    .proof-avatar {
-      width: 28px; height: 28px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 0.68rem; font-weight: 700; flex-shrink: 0;
-    }
-    .proof-head-text {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      line-height: 1.35;
-    }
-    .proof-head-text b { color: var(--text-primary); }
-    .proof-stars { color: var(--orange); letter-spacing: 1px; font-size: 0.8rem; }
-    .result-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 0;
-    }
-    .result-row + .result-row { border-top: 1px solid var(--border); }
-    .result-ring {
-      width: 46px; height: 46px; flex-shrink: 0;
-      border-radius: 50%;
-      background:
-        radial-gradient(closest-side, var(--bg-card) 78%, transparent 79% 100%),
-        conic-gradient(var(--accent) 100%, var(--border) 0);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.82rem; font-weight: 800; color: var(--text-primary);
-    }
-    .result-info { flex: 1; min-width: 0; }
-    .result-course {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 0.82rem; font-weight: 600; color: var(--text-primary);
-    }
-    .result-course .grade-status {
-      font-size: 0.66rem; font-weight: 600;
-      color: var(--accent-light);
-      background: var(--accent-glow);
-      border-radius: 999px;
-      padding: 1px 8px;
-    }
-    .result-quote {
-      font-size: 0.78rem; color: var(--text-secondary);
-      margin: 2px 0 0; line-height: 1.35;
-    }
-    .result-quote b { color: var(--text-primary); }
   </style>
 </head>
 <body>
@@ -112,37 +51,6 @@
       <div class="auth-card checkout-card">
         <h1>Start your 7-day free trial</h1>
         <p class="auth-subtitle" id="status-line"><b>$0.00 due today</b> · then $25/month after your 7-day trial · cancel anytime</p>
-
-        <div class="checkout-proof">
-          <div class="proof-head">
-            <span class="proof-avatars">
-              <span class="proof-avatar" style="background:#0ea5e9">JM</span>
-              <span class="proof-avatar" style="background:#8b5cf6">DK</span>
-              <span class="proof-avatar" style="background:#f97316">AR</span>
-            </span>
-            <span class="proof-head-text">
-              <span class="proof-stars">★★★★★</span><br />
-              Trusted by <b>10,000+ students</b> worldwide
-            </span>
-          </div>
-
-          <div class="result-row">
-            <span class="result-ring">100</span>
-            <span class="result-info">
-              <span class="result-course">BIO 201 — Final Exam <span class="grade-status">100/100 ✓</span></span>
-              <p class="result-quote"><b>Jasmine M.</b> — "First 100 I've ever gotten on a bio final."</p>
-            </span>
-          </div>
-
-          <div class="result-row">
-            <span class="result-ring">50</span>
-            <span class="result-info">
-              <span class="result-course">STAT 1350 — Midterm 2 <span class="grade-status">50/50 ✓</span></span>
-              <p class="result-quote"><b>Daniel K.</b> — "Went from a C+ average to top of the curve."</p>
-            </span>
-          </div>
-        </div>
-
 
         <form id="payment-form" hidden>
           <div id="express-checkout-element"></div>
