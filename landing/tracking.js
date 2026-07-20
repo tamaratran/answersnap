@@ -91,6 +91,7 @@
       var eventId = newEventId("InitiateCheckout");
       if (window.fbq) window.fbq("track", "InitiateCheckout", {}, { eventID: eventId });
       if (window.ttq) window.ttq.track("InitiateCheckout", { event_id: eventId });
+      if (window.posthog) window.posthog.capture("initiate_checkout", { event_id: eventId });
       return eventId;
     },
     purchase: function (value, currency, eventId) {
@@ -99,6 +100,7 @@
       eventId = eventId || newEventId("Purchase");
       if (window.fbq) window.fbq("track", "Purchase", { value: value, currency: currency }, { eventID: eventId });
       if (window.ttq) window.ttq.track("CompletePayment", { value: value, currency: currency }, { event_id: eventId });
+      if (window.posthog) window.posthog.capture("purchase", { value: value, currency: currency, event_id: eventId });
       return eventId;
     },
   };
