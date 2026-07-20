@@ -178,15 +178,20 @@
       const inputs = collectTextInputs();
       return inputs[0] || null;
     }
+    const clickRect = clickTarget.getBoundingClientRect();
+    const withinCutoff = (input) =>
+      Math.abs(input.getBoundingClientRect().top - clickRect.top) <= MAX_FILL_DISTANCE_PX;
+
     let el = clickTarget;
     for (let i = 0; i < 15 && el && el !== document.body; i++) {
       const input = el.querySelector('input[type="text"]:not(#answersnap-overlay input), textarea:not(#answersnap-overlay textarea)');
-      if (input) return input;
+      // Ancestor containers can span the whole quiz, so a found input may
+      // still belong to a distant question — enforce the distance cutoff.
+      if (input && withinCutoff(input)) return input;
       el = el.parentElement;
     }
-    // Fallback: nearest input by vertical distance, but only within a cutoff
+    // Fallback: nearest input by vertical distance, but only within the cutoff
     // so answers never land in a different question's input.
-    const clickRect = clickTarget.getBoundingClientRect();
     let best = null;
     let bestDist = Infinity;
     for (const input of collectTextInputs()) {
@@ -421,22 +426,42 @@
     return null;
   }
 
+  // Normalize text for math-aware comparison: map Unicode math characters
+  // (superscripts, minus sign, times) to their ASCII forms, keep sign
+  // characters so "x^2 + x - 6" and "x\u00b2 + x + 6" stay distinguishable.
+  const SUPERSCRIPTS = { "\u2070": "0", "\u00b9": "1", "\u00b2": "2", "\u00b3": "3", "\u2074": "4", "\u2075": "5", "\u2076": "6", "\u2077": "7", "\u2078": "8", "\u2079": "9" };
+
+  function normalizeExpr(s) {
+    return s
+      .toLowerCase()
+      .replace(/[\u2070\u00b9\u00b2\u00b3\u2074-\u2079]/g, (c) => SUPERSCRIPTS[c])
+      .replace(/[\u2212\u2012-\u2015]/g, "-")
+      .replace(/[\u00d7]/g, "*")
+      .replace(/\^/g, "")
+      .replace(/[^a-z0-9+\-*/=.]/g, "");
+  }
+
   function matchOptionByExactText(options, text) {
     // Strict matching for bare values (e.g. "12"): require the whole option
     // label to equal the value after normalization, so "12" can never match
     // "120 miles" in a neighboring question.
     if (!text) return null;
-    const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const normText = normalize(text);
+    const normText = normalizeExpr(text);
     if (!normText) return null;
     for (const opt of options) {
-      if (opt.text && normalize(opt.text) === normText) return opt;
+      if (opt.text && normalizeExpr(opt.text) === normText) return opt;
     }
     return null;
   }
 
   function matchOptionByText(options, text) {
     if (!text) return null;
+    // Sign-aware exact match first (handles Unicode \u00b2/\u2212 in option labels
+    // vs ASCII ^2/- in model answers) so near-identical math expressions
+    // that differ only in a sign can never be confused.
+    const exact = matchOptionByExactText(options, text);
+    if (exact) return exact;
+
     const lower = text.toLowerCase();
     // Exact substring match
     for (const opt of options) {
@@ -447,21 +472,21 @@
       if (opt.text && lower.includes(opt.text.toLowerCase())) return opt;
     }
     // Fuzzy: normalize whitespace/special chars and compare
-    const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const normText = normalize(text);
+    const normText = normalizeExpr(text);
     let bestMatch = null;
     let bestScore = 0;
     for (const opt of options) {
       if (!opt.text) continue;
-      const normOpt = normalize(opt.text);
+      const normOpt = normalizeExpr(opt.text);
       if (!normOpt) continue;
       // Check if one contains the other after normalization
       if (normOpt.includes(normText) || normText.includes(normOpt)) return opt;
-      // Token overlap score
-      const tWords = new Set(text.toLowerCase().split(/\s+/));
-      const oWords = opt.text.toLowerCase().split(/\s+/);
-      const overlap = oWords.filter((w) => tWords.has(w)).length;
-      const score = overlap / Math.max(tWords.size, oWords.length);
+      // Token overlap score (deduped so repeated tokens like "+" can't
+      // inflate the score of a wrong option)
+      const tWords = new Set(normalizeExpr(text) ? text.toLowerCase().split(/\s+/).map((w) => normalizeExpr(w)) : []);
+      const oWords = new Set(opt.text.toLowerCase().split(/\s+/).map((w) => normalizeExpr(w)));
+      const overlap = [...oWords].filter((w) => w && tWords.has(w)).length;
+      const score = overlap / Math.max(tWords.size, oWords.size);
       if (score > bestScore && score > 0.5) {
         bestScore = score;
         bestMatch = opt;
