@@ -41,6 +41,8 @@ TIKTOK_EVENTS_TOKEN = os.environ.get("TIKTOK_EVENTS_TOKEN", "")
 PURCHASE_VALUE = float(os.environ.get("PURCHASE_VALUE", "25"))
 PURCHASE_CURRENCY = os.environ.get("PURCHASE_CURRENCY", "USD")
 
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+
 JWT_SECRET = os.environ.get("JWT_SECRET", "change-me-in-production")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_DAYS = 30
@@ -369,6 +371,82 @@ async def register(req: AuthRequest):
     except aiosqlite.IntegrityError:
         await db.close()
         raise HTTPException(status_code=409, detail="Email already registered")
+    finally:
+        await db.close()
+
+    token = create_token(email, user_id)
+    return AuthResponse(token=token, email=email)
+
+
+class GoogleAuthRequest(BaseModel):
+    credential: str
+
+
+@app.post("/auth/google", response_model=AuthResponse)
+async def google_auth(req: GoogleAuthRequest):
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Google sign-in not configured")
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": req.credential},
+            )
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Could not reach Google. Please try again.")
+    if resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+    try:
+        info = resp.json()
+    except ValueError:
+        raise HTTPException(status_code=502, detail="Could not reach Google. Please try again.")
+    if not isinstance(info, dict):
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+    if info.get("aud") != GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+    if info.get("email_verified") not in (True, "true"):
+        raise HTTPException(status_code=401, detail="Google email not verified")
+
+    email = (info.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+
+    db = await get_db()
+    try:
+        cursor = await db.execute("SELECT id FROM users WHERE email = ?", (email,))
+        row = await cursor.fetchone()
+        if row:
+            user_id = row[0]
+        else:
+            stripe_customer_id = None
+            if STRIPE_SECRET_KEY:
+                try:
+                    existing = await asyncio.to_thread(
+                        stripe.Customer.list, email=email, limit=1
+                    )
+                    if existing.data:
+                        stripe_customer_id = existing.data[0].id
+                    else:
+                        customer = await asyncio.to_thread(
+                            stripe.Customer.create, email=email
+                        )
+                        stripe_customer_id = customer.id
+                except stripe.StripeError as e:
+                    raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
+
+            pw_hash = hash_password(os.urandom(32).hex())
+            try:
+                await db.execute(
+                    "INSERT INTO users (email, password_hash, stripe_customer_id) VALUES (?, ?, ?)",
+                    (email, pw_hash, stripe_customer_id),
+                )
+                await db.commit()
+            except aiosqlite.IntegrityError:
+                pass
+            cursor = await db.execute("SELECT id FROM users WHERE email = ?", (email,))
+            row = await cursor.fetchone()
+            user_id = row[0]
     finally:
         await db.close()
 
@@ -990,6 +1068,11 @@ async def api_signup(req: AuthRequest):
 @app.post("/api/login", response_model=AuthResponse)
 async def api_login(req: AuthRequest):
     return await login(req)
+
+
+@app.post("/api/auth/google", response_model=AuthResponse)
+async def api_google_auth(req: GoogleAuthRequest):
+    return await google_auth(req)
 
 
 @app.get("/api/me", response_model=SubscriptionStatus)

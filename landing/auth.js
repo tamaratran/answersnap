@@ -1,6 +1,7 @@
 (function () {
   var KEY = "cheatly_token";
   var API_BASE = "https://cheatly-backend.fly.dev";
+  var GOOGLE_CLIENT_ID = "448753116978-99n57kprcukk651g1k47rmi7l4tto9jp.apps.googleusercontent.com";
 
   function expOf(t) {
     try {
@@ -53,6 +54,34 @@
       throw new Error(data.detail || "Something went wrong. Please try again.");
     }
     return data;
+  };
+
+  window.initGoogleSignIn = function (containerId, errorSelector) {
+    var container = document.getElementById(containerId);
+    if (!container || !window.google || !google.accounts) return;
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: async function (response) {
+        var errorEl = errorSelector ? document.querySelector(errorSelector) : null;
+        if (errorEl) errorEl.textContent = "";
+        try {
+          var data = await window.api("/api/auth/google", {
+            method: "POST",
+            body: JSON.stringify({ credential: response.credential }),
+          });
+          if (data.token && window.CheatlyAuth) window.CheatlyAuth.set(data.token);
+          window.location.href = "dashboard.html";
+        } catch (err) {
+          if (errorEl) errorEl.textContent = err.message;
+        }
+      },
+    });
+    google.accounts.id.renderButton(container, {
+      theme: "outline",
+      size: "large",
+      width: container.offsetWidth || 320,
+      text: "continue_with",
+    });
   };
 
   window.bindAuthForm = function (formId, endpoint) {

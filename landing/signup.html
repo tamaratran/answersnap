@@ -10,6 +10,16 @@
   <link rel="icon" type="image/png" sizes="16x16" href="icon16.png" />
   <link rel="icon" type="image/png" sizes="48x48" href="icon48.png" />
   <link rel="apple-touch-icon" href="icon128.png" />
+  <style>
+    .auth-divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 14px 0; color: var(--text-muted); font-size: 0.78rem;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: ""; flex: 1; height: 1px; background: var(--border);
+    }
+    .google-signin { display: flex; justify-content: center; min-height: 44px; }
+  </style>
 </head>
 <body>
   <nav class="nav">
@@ -29,6 +39,9 @@
       <div class="auth-card">
         <h1>Create your account</h1>
         <p class="auth-subtitle">Free to sign up — no payment required.</p>
+        <div id="google-signin" class="google-signin"></div>
+        <p class="form-error" id="google-error"></p>
+        <div class="auth-divider">or sign up with email</div>
         <form id="signup-form">
           <label for="email">Email</label>
           <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" />
@@ -43,6 +56,7 @@
   </section>
 
   <script src="auth.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogleSignIn('google-signin', '#google-error')"></script>
   <script>bindAuthForm("signup-form", "/api/signup");</script>
 </body>
 </html>
