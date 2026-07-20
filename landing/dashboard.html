@@ -19,6 +19,14 @@
       margin-bottom: 14px;
     }
     .dash-pricing-row .pricing-price { margin: 0; }
+    .dash-pricing-row .pricing-badge { white-space: nowrap; }
+    @media (max-width: 520px) {
+      .dash-pricing-row { flex-direction: column; gap: 8px; }
+      .dash-pricing-row .pricing-badge { font-size: 0.72rem; padding: 4px 12px; }
+      .dash-features li { padding-left: 18px; text-indent: -18px; }
+      .result-course { flex-wrap: wrap; row-gap: 2px; font-size: 0.8rem; }
+      .result-course .grade-status { white-space: nowrap; }
+    }
     .checkout-proof {
       margin-bottom: 16px;
       padding-bottom: 12px;
