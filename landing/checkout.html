@@ -49,9 +49,9 @@
       margin-top: 12px;
     }
     .checkout-proof {
-      margin-top: 18px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
       text-align: left;
     }
     .proof-head {
@@ -128,24 +128,6 @@
   <section class="auth-section">
     <div class="container">
       <div class="auth-card checkout-card">
-        <h1>Start your 7-day free trial</h1>
-        <p class="auth-subtitle" id="status-line">Loading secure checkout…</p>
-
-        <div class="checkout-summary">
-          <h2>Cheatly Pro</h2>
-          <div class="checkout-summary-row"><span>7-day free trial</span><span class="checkout-trial-note">$0.00 today</span></div>
-          <div class="checkout-summary-row"><span>After trial · cancel anytime</span><span>$25.00 / month</span></div>
-          <div class="checkout-summary-row total"><span>Total due today</span><span>$0.00</span></div>
-        </div>
-
-        <form id="payment-form" hidden>
-          <div id="payment-element"></div>
-          <p class="form-error" id="payment-error"></p>
-          <button type="submit" id="submit-btn" class="btn btn-primary btn-block">Start Free Trial</button>
-        </form>
-
-        <p class="checkout-secure">🔒 Payments secured by Stripe. Your card won't be charged until your 7-day trial ends.</p>
-
         <div class="checkout-proof">
           <div class="proof-head">
             <span class="proof-avatars">
@@ -175,6 +157,25 @@
             </span>
           </div>
         </div>
+
+        <h1>Start your 7-day free trial</h1>
+        <p class="auth-subtitle" id="status-line">Loading secure checkout…</p>
+
+        <div class="checkout-summary">
+          <h2>Cheatly Pro</h2>
+          <div class="checkout-summary-row"><span>7-day free trial</span><span class="checkout-trial-note">$0.00 today</span></div>
+          <div class="checkout-summary-row"><span>After trial · cancel anytime</span><span>$25.00 / month</span></div>
+          <div class="checkout-summary-row total"><span>Total due today</span><span>$0.00</span></div>
+        </div>
+
+        <form id="payment-form" hidden>
+          <div id="payment-element"></div>
+          <p class="form-error" id="payment-error"></p>
+          <button type="submit" id="submit-btn" class="btn btn-primary btn-block">Start Free Trial</button>
+        </form>
+
+        <p class="checkout-secure">🔒 Payments secured by Stripe. Your card won't be charged until your 7-day trial ends.</p>
+
       </div>
     </div>
   </section>
