@@ -12,25 +12,28 @@
   <link rel="apple-touch-icon" href="icon128.png" />
   <style>
     .checkout-card { max-width: 480px; }
+    .checkout-card h1 { font-size: 1.55rem; margin-bottom: 4px; }
+    .checkout-card .auth-subtitle { font-size: 0.88rem; margin-bottom: 16px; }
+    .form-error:empty { display: none; }
     .checkout-summary {
       background: #f4faf6;
       border: 1px solid #d7ecdd;
       border-radius: 12px;
-      padding: 18px 20px;
-      margin-bottom: 22px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
       text-align: left;
     }
     .checkout-summary-row {
       display: flex;
       justify-content: space-between;
-      margin: 6px 0;
-      font-size: 0.95rem;
+      margin: 5px 0;
+      font-size: 0.92rem;
       color: #374151;
     }
     .checkout-summary-row.total {
       border-top: 1px solid #d7ecdd;
-      padding-top: 10px;
-      margin-top: 10px;
+      padding-top: 8px;
+      margin-top: 8px;
       font-weight: 700;
       color: #111827;
     }
@@ -39,15 +42,15 @@
       margin: 0 0 8px;
     }
     .checkout-trial-note { color: #059669; font-weight: 600; }
-    #payment-element { margin: 18px 0; min-height: 90px; }
+    #payment-element { margin: 0 0 14px; }
     .checkout-secure {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: #6b7280;
-      margin-top: 14px;
+      margin-top: 12px;
     }
     .checkout-proof {
-      margin-top: 24px;
-      padding-top: 20px;
+      margin-top: 18px;
+      padding-top: 16px;
       border-top: 1px solid var(--border);
       text-align: left;
     }
@@ -125,14 +128,13 @@
   <section class="auth-section">
     <div class="container">
       <div class="auth-card checkout-card">
-        <h1>Start your free trial</h1>
+        <h1>Start your 7-day free trial</h1>
         <p class="auth-subtitle" id="status-line">Loading secure checkout…</p>
 
         <div class="checkout-summary">
           <h2>Cheatly Pro</h2>
           <div class="checkout-summary-row"><span>7-day free trial</span><span class="checkout-trial-note">$0.00 today</span></div>
-          <div class="checkout-summary-row"><span>After trial</span><span>$25.00 / month</span></div>
-          <div class="checkout-summary-row"><span>Cancel anytime</span><span>—</span></div>
+          <div class="checkout-summary-row"><span>After trial · cancel anytime</span><span>$25.00 / month</span></div>
           <div class="checkout-summary-row total"><span>Total due today</span><span>$0.00</span></div>
         </div>
 
