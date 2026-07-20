@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log In — Cheatly</title>
+  <meta name="description" content="Log in to your Cheatly account." />
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" sizes="16x16" href="icon16.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="icon48.png" />
+  <link rel="apple-touch-icon" href="icon128.png" />
+  <style>
+    .auth-divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 14px 0; color: var(--text-muted); font-size: 0.78rem;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: ""; flex: 1; height: 1px; background: var(--border);
+    }
+    .google-signin { display: flex; justify-content: center; min-height: 44px; }
+  </style>
+  <script defer src="analytics.js"></script>
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-logo">
+        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <span>Cheatly</span>
+      </a>
+      <div class="nav-links">
+        <a href="signup.html">Sign Up</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="auth-section">
+    <div class="container">
+      <div class="auth-card">
+        <h1>Welcome back</h1>
+        <p class="auth-subtitle">Log in to your Cheatly account.</p>
+        <div id="google-signin" class="google-signin"></div>
+        <p class="form-error" id="google-error"></p>
+        <div class="auth-divider">or log in with email</div>
+        <form id="login-form">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" />
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Your password" />
+          <p class="form-error"></p>
+          <button type="submit" class="btn btn-primary btn-block">Log In</button>
+        </form>
+        <p class="auth-switch">New to Cheatly? <a href="signup.html">Create an account</a></p>
+      </div>
+    </div>
+  </section>
+
+  <script src="auth.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogleSignIn('google-signin', '#google-error')"></script>
+  <script>bindAuthForm("login-form", "/api/login");</script>
+</body>
+</html>
