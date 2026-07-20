@@ -152,7 +152,7 @@
       // First try to match the value against the nearest option group's text
       // (handles cases like AI returning "11" for a radio option labeled "11")
       const nearest = findNearestGroup(groups, clickTarget);
-      const textMatch = nearest ? matchOptionByText(nearest.options, entry.value) : null;
+      const textMatch = nearest ? matchOptionByExactText(nearest.options, entry.value) : null;
       if (textMatch) {
         clickElement(textMatch.element);
         highlightElement(textMatch.element);
@@ -169,6 +169,10 @@
     return false;
   }
 
+  // Max vertical distance (px) between the double-click and a candidate
+  // input before we consider it part of a different question.
+  const MAX_FILL_DISTANCE_PX = 300;
+
   function findNearestTextInput(clickTarget) {
     if (!clickTarget) {
       const inputs = collectTextInputs();
@@ -180,8 +184,19 @@
       if (input) return input;
       el = el.parentElement;
     }
-    const inputs = collectTextInputs();
-    return inputs[0] || null;
+    // Fallback: nearest input by vertical distance, but only within a cutoff
+    // so answers never land in a different question's input.
+    const clickRect = clickTarget.getBoundingClientRect();
+    let best = null;
+    let bestDist = Infinity;
+    for (const input of collectTextInputs()) {
+      const dist = Math.abs(input.getBoundingClientRect().top - clickRect.top);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = input;
+      }
+    }
+    return bestDist <= MAX_FILL_DISTANCE_PX ? best : null;
   }
 
   function fillTextInput(input, value) {
@@ -403,6 +418,20 @@
   function matchOptionByPosition(options, letter) {
     const idx = letter.charCodeAt(0) - "A".charCodeAt(0);
     if (idx >= 0 && idx < options.length) return options[idx];
+    return null;
+  }
+
+  function matchOptionByExactText(options, text) {
+    // Strict matching for bare values (e.g. "12"): require the whole option
+    // label to equal the value after normalization, so "12" can never match
+    // "120 miles" in a neighboring question.
+    if (!text) return null;
+    const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const normText = normalize(text);
+    if (!normText) return null;
+    for (const opt of options) {
+      if (opt.text && normalize(opt.text) === normText) return opt;
+    }
     return null;
   }
 

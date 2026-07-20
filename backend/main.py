@@ -23,10 +23,12 @@ import httpx
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1")
-# Fast model tried first for every question; escalates to OPENAI_MODEL when
-# the fast model reports low confidence or returns a malformed answer.
-# Set to "" to disable hybrid routing and always use OPENAI_MODEL.
-OPENAI_FAST_MODEL = os.environ.get("OPENAI_FAST_MODEL", "gpt-4o-mini")
+# Optional fast model tried first for every question; escalates to
+# OPENAI_MODEL when the fast model reports low confidence or returns a
+# malformed answer. Off by default: small vision models often answer the
+# wrong on-screen question with high confidence, which escalation can't
+# catch. Set e.g. OPENAI_FAST_MODEL=gpt-4o-mini to enable.
+OPENAI_FAST_MODEL = os.environ.get("OPENAI_FAST_MODEL", "")
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
