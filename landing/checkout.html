@@ -43,6 +43,14 @@
     }
     .checkout-trial-note { color: #059669; font-weight: 600; }
     #payment-element { margin: 0 0 14px; }
+    #express-checkout-element { margin: 0 0 4px; }
+    .pay-divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 12px 0; color: var(--text-muted); font-size: 0.78rem;
+    }
+    .pay-divider::before, .pay-divider::after {
+      content: ""; flex: 1; height: 1px; background: var(--border);
+    }
     .checkout-secure {
       font-size: 0.78rem;
       color: #6b7280;
@@ -128,6 +136,9 @@
   <section class="auth-section">
     <div class="container">
       <div class="auth-card checkout-card">
+        <h1>Start your 7-day free trial</h1>
+        <p class="auth-subtitle" id="status-line">Loading secure checkout…</p>
+
         <div class="checkout-proof">
           <div class="proof-head">
             <span class="proof-avatars">
@@ -158,8 +169,6 @@
           </div>
         </div>
 
-        <h1>Start your 7-day free trial</h1>
-        <p class="auth-subtitle" id="status-line">Loading secure checkout…</p>
 
         <div class="checkout-summary">
           <h2>Cheatly Pro</h2>
@@ -169,6 +178,8 @@
         </div>
 
         <form id="payment-form" hidden>
+          <div id="express-checkout-element"></div>
+          <div class="pay-divider" id="pay-divider" hidden>or pay with card</div>
           <div id="payment-element"></div>
           <p class="form-error" id="payment-error"></p>
           <button type="submit" id="submit-btn" class="btn btn-primary btn-block">Start Free Trial</button>
@@ -246,19 +257,41 @@
       elements.create("payment").mount("#payment-element");
       form.hidden = false;
 
+      async function confirmAndActivate() {
+        const result = await stripe.confirmSetup({
+          elements,
+          confirmParams: { return_url: window.location.origin + "/checkout.html" },
+          redirect: "if_required",
+        });
+        if (result.error) throw new Error(result.error.message);
+        await activate(result.setupIntent.id);
+      }
+
+      // One-tap Apple Pay / Google Pay buttons (shown only on supported devices)
+      const expressEl = elements.create("expressCheckout");
+      expressEl.mount("#express-checkout-element");
+      expressEl.on("ready", (event) => {
+        if (event.availablePaymentMethods) {
+          document.getElementById("pay-divider").hidden = false;
+        }
+      });
+      expressEl.on("confirm", async () => {
+        errorEl.textContent = "";
+        try {
+          await confirmAndActivate();
+        } catch (err) {
+          errorEl.textContent = err.message;
+          form.hidden = false;
+        }
+      });
+
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
         errorEl.textContent = "";
         submitBtn.disabled = true;
         submitBtn.textContent = "Processing…";
         try {
-          const result = await stripe.confirmSetup({
-            elements,
-            confirmParams: { return_url: window.location.origin + "/checkout.html" },
-            redirect: "if_required",
-          });
-          if (result.error) throw new Error(result.error.message);
-          await activate(result.setupIntent.id);
+          await confirmAndActivate();
         } catch (err) {
           errorEl.textContent = err.message;
           form.hidden = false;
