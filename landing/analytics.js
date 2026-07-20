@@ -15,8 +15,8 @@
  * Pageviews and outbound-link/click autocapture are handled automatically.
  */
 (function () {
-  // Fill in from PostHog → Project Settings → Project API Key ("phc_...").
-  var POSTHOG_KEY = "PHC_PLACEHOLDER";
+  // PostHog project "Cheatly" (US region). Public client-side key — safe to ship.
+  var POSTHOG_KEY = "phc_vRLRJ5CYcmF7sfZQfGTuieVEXkxv3LSS6wCPACBj2Cv7";
   // US cloud: https://us.i.posthog.com  ·  EU cloud: https://eu.i.posthog.com
   var POSTHOG_HOST = "https://us.i.posthog.com";
 
