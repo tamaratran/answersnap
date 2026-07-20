@@ -170,8 +170,10 @@
   }
 
   // Max vertical distance (px) between the double-click and a candidate
-  // input before we consider it part of a different question.
-  const MAX_FILL_DISTANCE_PX = 300;
+  // input before we consider it part of a different question. Kept below
+  // typical question-card spacing so a neighboring question's input never
+  // swallows an answer.
+  const MAX_FILL_DISTANCE_PX = 120;
 
   function findNearestTextInput(clickTarget) {
     if (!clickTarget) {
