@@ -23,6 +23,10 @@ import httpx
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1")
+# Fast model tried first for every question; escalates to OPENAI_MODEL when
+# the fast model reports low confidence or returns a malformed answer.
+# Set to "" to disable hybrid routing and always use OPENAI_MODEL.
+OPENAI_FAST_MODEL = os.environ.get("OPENAI_FAST_MODEL", "gpt-4o-mini")
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
@@ -562,7 +566,10 @@ def build_prompt(selected_text: str) -> str:
         "1. Identify the SINGLE question closest to where the user double-clicked.\n"
         "2. Read the question AND all answer choices very carefully.\n"
         "3. Reason through the problem step by step inside <reasoning> tags.\n"
-        "4. After reasoning, output your final answer inside <answer> tags.\n\n"
+        "4. After reasoning, output your final answer inside <answer> tags.\n"
+        "5. After the answer, output <confidence>high</confidence> or "
+        "<confidence>low</confidence>. Use low if the question is ambiguous, "
+        "the image is hard to read, or you are not fully certain.\n\n"
         "Format rules:\n"
         '- For multiple choice: return ONLY the letter and text, e.g. <answer>C. 2x + 2</answer>\n'
         '- For multiple select: return all correct options, e.g. <answer>A, C</answer>\n'
@@ -572,13 +579,16 @@ def build_prompt(selected_text: str) -> str:
         "- Answer ONLY ONE question \u2014 the one nearest to the user's click.\n\n"
         "IMPORTANT:\n"
         "- Read EVERY answer option before choosing. Do not pick the first plausible one.\n"
-        "- For math: show your work in <reasoning>. Double-check arithmetic.\n"
+        "- For math: show your work in <reasoning>. Then VERIFY the result before "
+        "answering: recompute it a second way or substitute it back into the "
+        "original problem. If the check fails, redo the work.\n"
         "- For science: apply the correct formula or principle.\n"
         "- If the question shows a graph, table, or diagram, analyze it carefully.\n"
         "- NEVER guess. If you are unsure, reason more carefully.\n\n"
         "Example:\n"
         "<reasoning>The question asks for the derivative of x^2. Using the power rule: d/dx(x^2) = 2x.</reasoning>\n"
-        "<answer>B. 2x</answer>"
+        "<answer>B. 2x</answer>\n"
+        "<confidence>high</confidence>"
     )
 
 
@@ -632,8 +642,22 @@ async def get_answer(req: AnswerRequest, request: Request):
     if not screenshot_data.startswith("data:"):
         screenshot_data = f"data:image/png;base64,{screenshot_data}"
 
+    # Hybrid routing: try the fast model first, escalate to the full model
+    # when it reports low confidence or returns a malformed answer.
+    if OPENAI_FAST_MODEL and OPENAI_FAST_MODEL != OPENAI_MODEL:
+        raw = await _call_vision_model(OPENAI_FAST_MODEL, prompt, screenshot_data)
+        answer = _extract_answer(raw)
+        if answer is not None and _extract_confidence(raw) != "low":
+            return AnswerResponse(answer=answer)
+
+    raw = await _call_vision_model(OPENAI_MODEL, prompt, screenshot_data)
+    answer = _extract_answer(raw)
+    return AnswerResponse(answer=answer if answer is not None else raw)
+
+
+async def _call_vision_model(model: str, prompt: str, screenshot_data: str) -> str:
     payload = {
-        "model": OPENAI_MODEL,
+        "model": model,
         "messages": [
             {
                 "role": "system",
@@ -672,19 +696,22 @@ async def get_answer(req: AnswerRequest, request: Request):
         raise HTTPException(status_code=resp.status_code, detail=detail)
 
     data = resp.json()
-    raw = data["choices"][0]["message"]["content"].strip()
-
-    answer = _extract_answer(raw)
-
-    return AnswerResponse(answer=answer)
+    return data["choices"][0]["message"]["content"].strip()
 
 
-def _extract_answer(raw: str) -> str:
-    """Pull the final answer from <answer>...</answer> tags, falling back to raw text."""
+def _extract_answer(raw: str) -> Optional[str]:
+    """Pull the final answer from <answer>...</answer> tags. None when missing."""
     match = re.search(r"<answer>(.*?)</answer>", raw, re.DOTALL)
     if match:
         return match.group(1).strip()
-    return raw
+    return None
+
+
+def _extract_confidence(raw: str) -> str:
+    match = re.search(r"<confidence>(.*?)</confidence>", raw, re.DOTALL)
+    if match:
+        return match.group(1).strip().lower()
+    return "high"
 
 
 @app.post("/locate", response_model=LocateResponse)

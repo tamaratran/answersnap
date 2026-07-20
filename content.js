@@ -64,8 +64,13 @@
   }
 
   function showAnswer(answer, _mode, clickTarget) {
-    // Auto-fill the answer on the page silently
-    autoFillAnswers(answer, clickTarget);
+    // Auto-fill the answer on the page silently. If nothing on the page
+    // could be filled, surface the answer in a toast so the user still
+    // gets a result instead of silence.
+    const filled = autoFillAnswers(answer, clickTarget);
+    if (!filled) {
+      showToast(`Answer: ${answer}`, 6000);
+    }
   }
 
   function showError(message) {
@@ -79,7 +84,7 @@
     }
   }
 
-  function showToast(text) {
+  function showToast(text, duration = 2000) {
     const toast = document.createElement("div");
     toast.className = "answersnap-toast";
     toast.textContent = text;
@@ -92,7 +97,7 @@
     setTimeout(() => {
       toast.classList.remove("answersnap-toast-visible");
       setTimeout(() => toast.remove(), 300);
-    }, 2000);
+    }, duration);
   }
 
   function escapeHtml(str) {
@@ -105,7 +110,7 @@
 
   function autoFillAnswers(answerText, clickTarget) {
     const parsed = parseAnswerLines(answerText);
-    if (parsed.length === 0) return;
+    if (parsed.length === 0) return false;
 
     const groups = collectOptionGroups();
 
@@ -114,6 +119,7 @@
       // Multi-select: only select within the single nearest group to avoid
       // cross-question pollution when AI returns answers for multiple questions
       const nearest = findNearestGroup(groups, clickTarget);
+      let anyFilled = false;
 
       if (nearest) {
         for (const entry of parsed) {
@@ -126,17 +132,22 @@
           if (match) {
             clickElement(match.element);
             highlightElement(match.element);
+            anyFilled = true;
           }
         }
       }
-      return;
+      return anyFilled;
     }
 
     const entry = parsed[0];
 
     if (entry.letter) {
       const el = selectChoice(groups, entry, clickTarget);
-      if (el) highlightElement(el);
+      if (el) {
+        highlightElement(el);
+        return true;
+      }
+      return false;
     } else if (entry.value) {
       // First try to match the value against the nearest option group's text
       // (handles cases like AI returning "11" for a radio option labeled "11")
@@ -145,14 +156,17 @@
       if (textMatch) {
         clickElement(textMatch.element);
         highlightElement(textMatch.element);
-      } else {
-        const input = findNearestTextInput(clickTarget);
-        if (input) {
-          fillTextInput(input, entry.value);
-          highlightElement(input);
-        }
+        return true;
       }
+      const input = findNearestTextInput(clickTarget);
+      if (input) {
+        fillTextInput(input, entry.value);
+        highlightElement(input);
+        return true;
+      }
+      return false;
     }
+    return false;
   }
 
   function findNearestTextInput(clickTarget) {
@@ -579,8 +593,12 @@
       } else {
         showAnswer(response.answer, response.displayMode, clickTarget);
       }
-    } catch (_err) {
-      showError("Failed to get answer. Check your settings.");
+    } catch (err) {
+      if (err && err.message === "TIMEOUT") {
+        showError("Cheatly timed out — try double-clicking again");
+      } else {
+        showError("Failed to get answer. Check your settings.");
+      }
     } finally {
       isLoading = false;
     }
@@ -588,22 +606,42 @@
 
   // ── Message Helpers ─────────────────────────────────────────────────────
 
-  function sendMessage(msg) {
+  const MESSAGE_TIMEOUT_MS = 75000;
+
+  function sendMessage(msg, timeoutMs = MESSAGE_TIMEOUT_MS) {
     return new Promise((resolve, reject) => {
+      let settled = false;
+      let timer = null;
+
+      const settle = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        fn(value);
+      };
+
       try {
         const port = chrome.runtime.connect({ name: "answersnap" });
+
+        timer = setTimeout(() => {
+          try { port.disconnect(); } catch (_e) { /* already gone */ }
+          settle(reject, new Error("TIMEOUT"));
+        }, timeoutMs);
+
         port.onMessage.addListener((response) => {
           port.disconnect();
-          resolve(response);
+          settle(resolve, response);
         });
         port.onDisconnect.addListener(() => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          }
+          // The service worker died (or the port closed) before replying.
+          // Always settle so the caller never hangs with isLoading stuck.
+          const message = chrome.runtime.lastError?.message ||
+            "Connection to Cheatly closed before a response arrived";
+          settle(reject, new Error(message));
         });
         port.postMessage(msg);
       } catch (err) {
-        reject(new Error(err.message || "Could not connect to service worker"));
+        settle(reject, new Error(err.message || "Could not connect to service worker"));
       }
     });
   }
