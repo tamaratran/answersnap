@@ -99,6 +99,9 @@ def init_db():
             active INTEGER DEFAULT 1
         )
     """)
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
+    if "referral_source" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN referral_source TEXT")
     conn.commit()
     conn.close()
 
@@ -1107,6 +1110,30 @@ async def api_google_auth(req: GoogleAuthRequest):
 @app.get("/api/me", response_model=SubscriptionStatus)
 async def api_me(request: Request):
     return await get_me(request)
+
+
+REFERRAL_SOURCES = {"tiktok", "instagram", "google_search", "friend_referral", "other"}
+
+
+class ReferralSourceRequest(BaseModel):
+    source: str
+
+
+@app.post("/api/referral-source")
+async def api_referral_source(req: ReferralSourceRequest, request: Request):
+    user = await get_current_user(request)
+    if req.source not in REFERRAL_SOURCES:
+        raise HTTPException(status_code=400, detail="Invalid source")
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE users SET referral_source = ? WHERE email = ?",
+            (req.source, user["sub"]),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True}
 
 
 @app.post("/api/logout")

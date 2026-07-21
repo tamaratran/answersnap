@@ -56,7 +56,7 @@
     return data;
   };
 
-  window.initGoogleSignIn = function (containerId, errorSelector) {
+  window.initGoogleSignIn = function (containerId, errorSelector, redirect) {
     var container = document.getElementById(containerId);
     if (!container || !window.google || !google.accounts) return;
     google.accounts.id.initialize({
@@ -70,7 +70,7 @@
             body: JSON.stringify({ credential: response.credential }),
           });
           if (data.token && window.CheatlyAuth) window.CheatlyAuth.set(data.token);
-          window.location.href = "dashboard.html";
+          window.location.href = redirect || "dashboard.html";
         } catch (err) {
           if (errorEl) errorEl.textContent = err.message;
         }
@@ -84,7 +84,7 @@
     });
   };
 
-  window.bindAuthForm = function (formId, endpoint) {
+  window.bindAuthForm = function (formId, endpoint, redirect) {
     var form = document.getElementById(formId);
     if (!form) return;
     form.addEventListener("submit", async function (e) {
@@ -102,7 +102,7 @@
           }),
         });
         if (data.token && window.CheatlyAuth) window.CheatlyAuth.set(data.token);
-        window.location.href = "dashboard.html";
+        window.location.href = redirect || "dashboard.html";
       } catch (err) {
         if (errorEl) errorEl.textContent = err.message;
         if (button) button.disabled = false;
