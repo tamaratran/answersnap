@@ -51,8 +51,8 @@
   <section class="auth-section">
     <div class="container">
       <div class="auth-card checkout-card">
-        <h1>Start your 7-day free trial</h1>
-        <p class="auth-subtitle" id="status-line"><b>$0.00 due today</b> · then $25/month after your 7-day trial · cancel anytime</p>
+        <h1>Start your 3-day free trial</h1>
+        <p class="auth-subtitle" id="status-line"><b>$0.00 due today</b> · then $25/month after your 3-day trial · cancel anytime</p>
 
         <form id="payment-form" hidden>
           <div id="express-checkout-element"></div>
@@ -62,7 +62,7 @@
           <button type="submit" id="submit-btn" class="btn btn-primary btn-block">Start Free Trial</button>
         </form>
 
-        <p class="checkout-secure">🔒 Payments secured by Stripe. Your card won't be charged until your 7-day trial ends.</p>
+        <p class="checkout-secure">🔒 Payments secured by Stripe. Your card won't be charged until your 3-day trial ends.</p>
 
       </div>
     </div>
@@ -121,7 +121,7 @@
       }
 
       document.getElementById("user-email").textContent = setup.email;
-      statusLine.innerHTML = "<b>$0.00 due today</b> · then $25/month after your 7-day trial · cancel anytime";
+      statusLine.innerHTML = "<b>$0.00 due today</b> · then $25/month after your 3-day trial · cancel anytime";
 
       const stripe = Stripe(setup.publishable_key);
       const elements = stripe.elements({
@@ -174,7 +174,7 @@
           form.hidden = false;
           submitBtn.disabled = false;
           submitBtn.textContent = "Start Free Trial";
-          statusLine.innerHTML = "<b>$0.00 due today</b> · then $25/month after your 7-day trial · cancel anytime";
+          statusLine.innerHTML = "<b>$0.00 due today</b> · then $25/month after your 3-day trial · cancel anytime";
         }
       });
     })();

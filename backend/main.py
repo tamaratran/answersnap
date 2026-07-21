@@ -35,6 +35,7 @@ STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
 STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+TRIAL_DAYS = int(os.environ.get("TRIAL_DAYS", "3"))
 LANDING_URL = os.environ.get("LANDING_URL", "https://cheatly.io")
 STRIPE_CHECKOUT_URL = "https://api.stripe.com/v1/checkout/sessions"
 
@@ -914,7 +915,7 @@ async def create_checkout(email: str = ""):
         "success_url": f"{LANDING_URL}/download.html?session_id={{CHECKOUT_SESSION_ID}}",
         "cancel_url": f"{LANDING_URL}/?checkout=cancelled",
         "allow_promotion_codes": "true",
-        "subscription_data[trial_period_days]": "7",
+        "subscription_data[trial_period_days]": str(TRIAL_DAYS),
     }
 
     if email:
@@ -1239,7 +1240,7 @@ async def subscribe_activate(req: ActivateRequest, request: Request):
                 stripe.Subscription.create,
                 customer=customer_id,
                 items=[{"price": STRIPE_PRICE_ID}],
-                trial_period_days=7,
+                trial_period_days=TRIAL_DAYS,
                 default_payment_method=intent.payment_method,
                 trial_settings={"end_behavior": {"missing_payment_method": "cancel"}},
             )
