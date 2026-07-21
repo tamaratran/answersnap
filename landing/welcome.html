@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome — Cheatly</title>
+  <meta name="description" content="Tell us how you found Cheatly." />
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" sizes="16x16" href="icon16.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="icon48.png" />
+  <link rel="apple-touch-icon" href="icon128.png" />
+  <style>
+    .survey-card h1 { font-size: 1.45rem; margin-bottom: 4px; }
+    .survey-options { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 4px; }
+    .survey-option {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 16px; border: 1px solid var(--border); border-radius: 12px;
+      background: var(--bg-card); color: var(--text-primary);
+      font-size: 0.92rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; text-align: left; width: 100%;
+      transition: border-color 0.15s, background 0.15s, transform 0.15s;
+    }
+    .survey-option:hover { border-color: var(--accent); background: var(--accent-glow); transform: translateY(-1px); }
+    .survey-option:disabled { opacity: 0.6; cursor: default; transform: none; }
+    .survey-option .survey-emoji { font-size: 1.15rem; width: 26px; text-align: center; }
+    .survey-skip {
+      display: inline-block; margin-top: 14px;
+      font-size: 0.82rem; color: var(--text-muted); text-decoration: underline;
+    }
+  </style>
+  <script defer src="analytics.js"></script>
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-logo">
+        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <span>Cheatly</span>
+      </a>
+    </div>
+  </nav>
+
+  <section class="auth-section">
+    <div class="container">
+      <div class="auth-card survey-card">
+        <h1>Welcome to Cheatly! 🎉</h1>
+        <p class="auth-subtitle">Quick question — how did you find us?</p>
+        <div class="survey-options">
+          <button type="button" class="survey-option" data-source="tiktok"><span class="survey-emoji">🎵</span>TikTok</button>
+          <button type="button" class="survey-option" data-source="instagram"><span class="survey-emoji">📸</span>Instagram</button>
+          <button type="button" class="survey-option" data-source="google_search"><span class="survey-emoji">🔍</span>Google Search</button>
+          <button type="button" class="survey-option" data-source="friend_referral"><span class="survey-emoji">💬</span>Referral from a friend</button>
+          <button type="button" class="survey-option" data-source="other"><span class="survey-emoji">✨</span>Other</button>
+        </div>
+        <a href="dashboard.html" class="survey-skip">Skip</a>
+      </div>
+    </div>
+  </section>
+
+  <script src="auth.js"></script>
+  <script>
+    if (!window.CheatlyAuth || !CheatlyAuth.get()) window.location.href = "signup.html";
+    document.querySelectorAll(".survey-option").forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        document.querySelectorAll(".survey-option").forEach(function (b) { b.disabled = true; });
+        var source = btn.getAttribute("data-source");
+        try {
+          if (window.posthog && posthog.capture) posthog.capture("referral_source", { source: source });
+        } catch (_) {}
+        try {
+          await api("/api/referral-source", {
+            method: "POST",
+            body: JSON.stringify({ source: source }),
+          });
+        } catch (_) {}
+        window.location.href = "dashboard.html";
+      });
+    });
+  </script>
+</body>
+</html>
