@@ -53,6 +53,14 @@
           <button type="submit" id="account-submit" class="btn btn-primary btn-large download-btn">Create Account</button>
         </form>
 
+        <div id="webstore-cta" style="margin-top:20px">
+          <a href="https://chromewebstore.google.com/detail/pgljbingjokidaklhfhndnfofldajafh" target="_blank" rel="noopener" class="btn btn-secondary btn-large download-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
+            Get the Extension on the Chrome Web Store
+          </a>
+          <p class="download-file-info">You can install now and sign in once your account is created.</p>
+        </div>
+
         <div id="account-success" hidden>
           <div class="download-badge">Account Created</div>
           <h2 style="margin:12px 0 4px">You're all set</h2>
@@ -199,6 +207,7 @@
           if (resp.status === 409) {
             showError("This email already has an account. Just sign in with it in the extension.");
             form.hidden = true;
+            document.getElementById("webstore-cta").hidden = true;
             successMsg.textContent = "Add the extension and sign in with " + email + ".";
             successBox.hidden = false;
             return;
@@ -210,6 +219,7 @@
             return;
           }
           form.hidden = true;
+          document.getElementById("webstore-cta").hidden = true;
           successMsg.textContent = "Add the extension and sign in with " + email + ".";
           successBox.hidden = false;
         } catch (err) {
