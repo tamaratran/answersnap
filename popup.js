@@ -5,6 +5,7 @@
  */
 
 const BACKEND_URL = "https://cheatly-backend.fly.dev";
+const GOOGLE_CLIENT_ID = "448753116978-99n57kprcukk651g1k47rmi7l4tto9jp.apps.googleusercontent.com";
 
 const authView = document.getElementById("auth-view");
 const mainView = document.getElementById("main-view");
@@ -95,6 +96,61 @@ async function doAuth(endpoint, email, password, btnId) {
     btn.disabled = false;
     btn.textContent = originalText;
   }
+}
+
+document.getElementById("google-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("google-btn");
+  btn.disabled = true;
+  hideAuthError();
+
+  try {
+    const idToken = await getGoogleIdToken();
+    const resp = await fetch(`${BACKEND_URL}/auth/google`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential: idToken }),
+    });
+
+    const data = await resp.json();
+    if (!resp.ok) {
+      showAuthError(data.detail || "Google sign-in failed");
+      return;
+    }
+
+    await chrome.storage.local.set({ authToken: data.token, authEmail: data.email });
+    chrome.runtime.sendMessage({ type: "AUTH_CHANGED" });
+    await loadAuthState();
+  } catch (err) {
+    if (err && err.message === "canceled") return;
+    showAuthError("Google sign-in failed — try again");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function getGoogleIdToken() {
+  const redirectUri = chrome.identity.getRedirectURL();
+  const nonce = crypto.randomUUID();
+  const authUrl =
+    "https://accounts.google.com/o/oauth2/v2/auth" +
+    `?client_id=${encodeURIComponent(GOOGLE_CLIENT_ID)}` +
+    "&response_type=id_token" +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    "&scope=openid%20email%20profile" +
+    `&nonce=${nonce}` +
+    "&prompt=select_account";
+
+  return new Promise((resolve, reject) => {
+    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (responseUrl) => {
+      if (chrome.runtime.lastError || !responseUrl) {
+        return reject(new Error("canceled"));
+      }
+      const fragment = responseUrl.split("#")[1] || "";
+      const idToken = new URLSearchParams(fragment).get("id_token");
+      if (!idToken) return reject(new Error("no id_token in response"));
+      resolve(idToken);
+    });
+  });
 }
 
 document.getElementById("logout-btn").addEventListener("click", async () => {
