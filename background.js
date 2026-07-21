@@ -137,11 +137,28 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       } else {
         clearAutoDisableTimer();
       }
+      broadcastToggleState(message.settings.enabled);
       sendResponse({ ok: true });
     });
     return true;
   }
 });
+
+// ── Toggle Broadcast ────────────────────────────────────────────────────────
+
+// Push the enabled state to every open tab so content scripts don't require
+// a page reload to pick up popup/shortcut/auto-disable toggle changes.
+function broadcastToggleState(enabled) {
+  chrome.tabs.query({}, (tabs) => {
+    for (const tab of tabs) {
+      if (!tab.id) continue;
+      chrome.tabs.sendMessage(tab.id, {
+        type: "TOGGLE_STATE",
+        enabled,
+      }).catch(() => {});
+    }
+  });
+}
 
 // ── Server Session Reset ────────────────────────────────────────────────────
 
@@ -179,14 +196,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   settings.enabled = false;
   await chrome.storage.local.set({ settings });
 
-  // Notify active tab so toast shows
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id) {
-    chrome.tabs.sendMessage(tab.id, {
-      type: "TOGGLE_STATE",
-      enabled: false,
-    }).catch(() => {});
-  }
+  broadcastToggleState(false);
 });
 
 // Start timer on install/startup if enabled
@@ -216,15 +226,6 @@ chrome.commands.onCommand.addListener(async (command) => {
       clearAutoDisableTimer();
     }
 
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-    if (tab?.id) {
-      chrome.tabs.sendMessage(tab.id, {
-        type: "TOGGLE_STATE",
-        enabled: settings.enabled,
-      });
-    }
+    broadcastToggleState(settings.enabled);
   }
 });

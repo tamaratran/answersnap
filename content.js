@@ -619,11 +619,32 @@
 
   // ── Double-Click Handler ────────────────────────────────────────────────
 
+  let lastDisabledToastAt = 0;
+
+  function showDisabledToast() {
+    const now = Date.now();
+    if (now - lastDisabledToastAt < 30000) return;
+    lastDisabledToastAt = now;
+    showToast("Cheatly is off — press Alt+A or enable it in the popup");
+  }
+
   document.addEventListener("dblclick", async (e) => {
-    if (!enabled || isLoading) return;
+    if (isLoading) return;
 
     // Don't trigger on our own overlay
     if (e.target.closest("#answersnap-overlay")) return;
+
+    if (!enabled) {
+      // Re-sync in case the toggle changed from the popup after this page loaded
+      try {
+        const settings = await sendMessage({ type: "GET_SETTINGS" }, 3000);
+        enabled = settings.enabled;
+      } catch (_e) { /* keep local state */ }
+      if (!enabled) {
+        showDisabledToast();
+        return;
+      }
+    }
 
     const selectedText = window.getSelection()?.toString()?.trim() || "";
     const clickTarget = e.target;
