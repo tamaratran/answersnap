@@ -301,20 +301,19 @@ function updateWorkingBanner(settings, subInfo) {
     return;
   }
 
-  workingBanner.classList.remove("hidden");
-
+  // Only warn when something is wrong; no banner in the healthy state.
   const working = settings.enabled && !subInfo.rate_limited;
   if (working) {
-    workingBanner.className = "working-banner ok";
-    workingText.textContent = "Cheatly is ON and working";
-    restartBtn.classList.add("hidden");
-  } else {
-    workingBanner.className = "working-banner bad";
-    workingText.textContent = settings.enabled
-      ? "Cheatly is not working — session expired"
-      : "Cheatly is OFF";
-    restartBtn.classList.remove("hidden");
+    workingBanner.classList.add("hidden");
+    return;
   }
+
+  workingBanner.classList.remove("hidden");
+  workingBanner.className = "working-banner bad";
+  workingText.textContent = settings.enabled
+    ? "Cheatly is not working — session expired"
+    : "Cheatly is OFF";
+  restartBtn.classList.remove("hidden");
 }
 
 restartBtn.addEventListener("click", () => {
