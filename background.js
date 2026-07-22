@@ -104,7 +104,19 @@ async function handlePortMessage(message, port) {
       }
       // Capture screenshot here so it never round-trips through the content script
       const screenshot = await captureScreenshot();
-      const answer = await queryBackend(screenshot, message.selectedText);
+      let answer;
+      try {
+        answer = await queryBackend(screenshot, message.selectedText);
+      } catch (err) {
+        if (err.message !== "RATE_LIMITED") throw err;
+        // Locally enabled but the server usage window has expired — the two
+        // can drift apart (extension reinstalled, alarm lost, clock skew),
+        // which otherwise leaves the user stuck on 429 with no way out
+        // except toggling. Start a fresh window and retry once.
+        await resetServerSession();
+        startAutoDisableTimer();
+        answer = await queryBackend(screenshot, message.selectedText);
+      }
 
       port.postMessage({ answer, displayMode: settings.displayMode });
     } else if (message.type === "GET_SETTINGS") {
@@ -179,9 +191,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   settings.enabled = false;
   await chrome.storage.local.set({ settings });
 
-  // Notify active tab so toast shows
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id) {
+  // Notify every tab — each content script caches `enabled`, and a tab
+  // that misses this update keeps double-click handling silently dead.
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab.id) continue;
     chrome.tabs.sendMessage(tab.id, {
       type: "TOGGLE_STATE",
       enabled: false,
