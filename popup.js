@@ -26,8 +26,12 @@ const subDetail = document.getElementById("sub-detail");
 const subscribeCta = document.getElementById("subscribe-cta");
 const subscribeLink = document.getElementById("subscribe-link");
 const settingsSection = document.getElementById("settings-section");
+const workingBanner = document.getElementById("working-banner");
+const workingText = document.getElementById("working-text");
+const restartBtn = document.getElementById("restart-btn");
 
 let currentMode = "homework";
+let currentSubInfo = null;
 
 // ── Auth Tab Switching ────────────────────────────────────────────────────
 
@@ -260,6 +264,7 @@ async function loadAuthState() {
   const subInfo = result.unavailable
     ? { _connectionError: true }
     : result.data;
+  currentSubInfo = subInfo;
   showMainView(authEmail || subInfo?.email || "", subInfo);
 
   // Load settings
@@ -271,6 +276,7 @@ async function loadAuthState() {
       btn.classList.toggle("active", btn.dataset.mode === currentMode);
     });
     updateStatus(settings);
+    updateWorkingBanner(settings, subInfo);
   });
 }
 
@@ -285,8 +291,41 @@ function saveSettings() {
   };
   chrome.runtime.sendMessage({ type: "SAVE_SETTINGS", settings }, () => {
     updateStatus(settings);
+    updateWorkingBanner(settings, currentSubInfo);
   });
 }
+
+function updateWorkingBanner(settings, subInfo) {
+  if (!subInfo || subInfo._connectionError || !subInfo.subscribed) {
+    workingBanner.classList.add("hidden");
+    return;
+  }
+
+  workingBanner.classList.remove("hidden");
+
+  const working = settings.enabled && !subInfo.rate_limited;
+  if (working) {
+    workingBanner.className = "working-banner ok";
+    workingText.textContent = "Cheatly is ON and working";
+    restartBtn.classList.add("hidden");
+  } else {
+    workingBanner.className = "working-banner bad";
+    workingText.textContent = settings.enabled
+      ? "Cheatly is not working — session expired"
+      : "Cheatly is OFF";
+    restartBtn.classList.remove("hidden");
+  }
+}
+
+restartBtn.addEventListener("click", () => {
+  restartBtn.disabled = true;
+  restartBtn.textContent = "Restarting...";
+  chrome.runtime.sendMessage({ type: "RESTART_EXTENSION" }, async () => {
+    await loadAuthState();
+    restartBtn.disabled = false;
+    restartBtn.textContent = "Restart Cheatly";
+  });
+});
 
 function updateStatus(settings) {
   if (!settings.enabled) {

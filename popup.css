@@ -249,6 +249,62 @@ body {
   background: rgba(220, 38, 38, 0.08);
 }
 
+/* Working Status Banner */
+.working-banner {
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+
+.working-banner.ok {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.working-banner.bad {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.working-text {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.working-banner.ok .working-text {
+  color: #059669;
+}
+
+.working-banner.bad .working-text {
+  color: #dc2626;
+}
+
+.restart-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.restart-btn:hover {
+  background: #b91c1c;
+}
+
+.restart-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* Subscription Status */
 .sub-status {
   margin-bottom: 12px;
