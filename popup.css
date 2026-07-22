@@ -257,11 +257,6 @@ body {
   border: 1px solid;
 }
 
-.working-banner.ok {
-  background: #ecfdf5;
-  border-color: #a7f3d0;
-}
-
 .working-banner.bad {
   background: #fef2f2;
   border-color: #fecaca;
@@ -270,13 +265,6 @@ body {
 .working-text {
   font-size: 13px;
   font-weight: 600;
-}
-
-.working-banner.ok .working-text {
-  color: #059669;
-}
-
-.working-banner.bad .working-text {
   color: #dc2626;
 }
 
