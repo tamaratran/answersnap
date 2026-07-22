@@ -156,6 +156,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     });
     return true;
   }
+
+  if (message.type === "RESTART_EXTENSION") {
+    // One-click recovery from the popup: force-enable, start a fresh
+    // server usage window, and sync every open tab.
+    (async () => {
+      const settings = await getSettings();
+      settings.enabled = true;
+      await chrome.storage.local.set({ settings });
+      await resetServerSession();
+      startAutoDisableTimer();
+      await broadcastToggleState(true);
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
 });
 
 // ── Tab Broadcast ────────────────────────────────────────────────────────────
