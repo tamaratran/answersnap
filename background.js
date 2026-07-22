@@ -149,11 +149,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       } else {
         clearAutoDisableTimer();
       }
+      // Content scripts cache `enabled`; without this, open tabs keep the
+      // stale value until reload and double-clicks silently do nothing.
+      await broadcastToggleState(message.settings.enabled);
       sendResponse({ ok: true });
     });
     return true;
   }
 });
+
+// ── Tab Broadcast ────────────────────────────────────────────────────────────
+
+async function broadcastToggleState(enabled) {
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab.id) continue;
+    chrome.tabs.sendMessage(tab.id, {
+      type: "TOGGLE_STATE",
+      enabled,
+    }).catch(() => {});
+  }
+}
 
 // ── Server Session Reset ────────────────────────────────────────────────────
 
@@ -193,14 +209,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
   // Notify every tab — each content script caches `enabled`, and a tab
   // that misses this update keeps double-click handling silently dead.
-  const tabs = await chrome.tabs.query({});
-  for (const tab of tabs) {
-    if (!tab.id) continue;
-    chrome.tabs.sendMessage(tab.id, {
-      type: "TOGGLE_STATE",
-      enabled: false,
-    }).catch(() => {});
-  }
+  await broadcastToggleState(false);
 });
 
 // Start timer on install/startup if enabled
@@ -230,15 +239,6 @@ chrome.commands.onCommand.addListener(async (command) => {
       clearAutoDisableTimer();
     }
 
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-    if (tab?.id) {
-      chrome.tabs.sendMessage(tab.id, {
-        type: "TOGGLE_STATE",
-        enabled: settings.enabled,
-      });
-    }
+    await broadcastToggleState(settings.enabled);
   }
 });
