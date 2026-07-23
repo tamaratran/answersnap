@@ -105,9 +105,17 @@
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: var(--accent-glow);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   color: var(--accent-light);
   transition: all 0.25s;
+}
+
+.platform-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 6px;
 }
 
 .platform-card.selected .platform-icon {
