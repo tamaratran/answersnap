@@ -39,9 +39,11 @@
   <section class="onboarding-hero">
     <div class="container">
       <div class="onboarding-progress">
-        <div class="progress-step active">1</div>
+        <div class="progress-step active" id="step-1">1</div>
         <div class="progress-line"></div>
-        <div class="progress-step">2</div>
+        <div class="progress-step" id="step-2">2</div>
+        <div class="progress-line"></div>
+        <div class="progress-step" id="step-3">3</div>
       </div>
       <h1>What platform do you use?</h1>
       <p class="onboarding-subtitle">Select your testing platform below, or search for it</p>
@@ -150,6 +152,60 @@
               <span class="confirmed-platform" id="confirmed-platform"></span>
               <span class="confirmed-msg">Supported with 100% accuracy</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="onboarding-demo hidden" id="onboarding-demo">
+        <h2 class="demo-heading">Here's Cheatly on <span id="demo-platform"></span></h2>
+        <p class="demo-sub">Watch it answer a question — this is exactly what you'll see</p>
+        <div class="demo-stage">
+          <div class="demo-quiz-card">
+            <div class="demo-quiz-header">
+              <span class="demo-quiz-dot"></span>
+              <span class="demo-quiz-dot"></span>
+              <span class="demo-quiz-dot"></span>
+              <span class="demo-quiz-title" id="demo-quiz-title"></span>
+            </div>
+            <div class="demo-quiz-question" id="demo-quiz-question">
+              What is the derivative of x&sup2; + 2x + 1?
+            </div>
+            <div class="demo-quiz-options">
+              <label class="demo-quiz-option"><span class="demo-radio"></span> A. 2x&sup2; + 4x - 2</label>
+              <label class="demo-quiz-option"><span class="demo-radio"></span> B. x&sup2; + 2x + 1</label>
+              <label class="demo-quiz-option" data-correct><span class="demo-radio"></span> C. 2x + 2</label>
+              <label class="demo-quiz-option"><span class="demo-radio"></span> D. 2x&sup2; - 4x + 2</label>
+            </div>
+            <div class="demo-status" id="demo-status"></div>
+            <div class="demo-cursor" id="demo-cursor">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#0f172a" stroke="#fff" stroke-width="1.5"><path d="M5 3l14 8-6.5 1.5L9 19z"/></svg>
+            </div>
+          </div>
+        </div>
+        <button class="demo-replay hidden" id="demo-replay">&#8635; Replay demo</button>
+      </div>
+
+      <div class="success-stories hidden" id="success-stories">
+        <div class="stories-stats">
+          <div class="stat"><div class="stat-num">12,000+</div><div class="stat-label">students</div></div>
+          <div class="stat"><div class="stat-num">1.4M+</div><div class="stat-label">questions answered</div></div>
+          <div class="stat"><div class="stat-num">4.8&#9733;</div><div class="stat-label">average rating</div></div>
+        </div>
+        <div class="stories-grid" id="stories-grid">
+          <div class="story-card" data-platform="Canvas">
+            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <p class="story-quote">"Raised my bio quiz average from 71% to 96% in one semester. Every Canvas quiz, double-click, done."</p>
+            <div class="story-author"><span class="story-avatar">D</span><span>Destiny, Junior &bull; <span class="story-platform">Canvas</span></span></div>
+          </div>
+          <div class="story-card" data-platform="Quizlet">
+            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <p class="story-quote">"I went from failing chem to a B+ in three weeks. It even handles the diagram questions on Quizlet."</p>
+            <div class="story-author"><span class="story-avatar">M</span><span>Marcus, Sophomore &bull; <span class="story-platform">Quizlet</span></span></div>
+          </div>
+          <div class="story-card" data-platform="Google Forms">
+            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <p class="story-quote">"Finished a 40-question Google Forms exam in 12 minutes with a 98%. Invisible mode is a lifesaver."</p>
+            <div class="story-author"><span class="story-avatar">A</span><span>Aaliyah, Freshman &bull; <span class="story-platform">Google Forms</span></span></div>
           </div>
         </div>
       </div>
