@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cheatly — See It In Action</title>
+  <meta name="description" content="Select your testing platform and see how Cheatly delivers 100% accuracy on any quiz." />
+  <meta name="theme-color" content="#10b981" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="onboarding.css" />
+  <link rel="stylesheet" href="wins.css" />
+  <link rel="icon" href="icon16.png" sizes="16x16" type="image/png" />
+  <link rel="icon" href="icon48.png" sizes="48x48" type="image/png" />
+  <link rel="icon" href="icon128.png" sizes="128x128" type="image/png" />
+  <link rel="apple-touch-icon" href="icon128.png" />
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-CF2V24H2RE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-CF2V24H2RE');
+  </script>
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="/" class="nav-logo">
+        <img src="icon48.png" alt="Cheatly" class="logo-img" width="28" height="28" />
+        <span>Cheatly</span>
+      </a>
+    </div>
+  </nav>
+
+  <section class="onboarding-hero">
+    <div class="container">
+      <div class="onboarding-progress">
+        <div class="progress-step completed" id="step-1">&#10003;</div>
+        <div class="progress-line"></div>
+        <div class="progress-step active" id="step-2">2</div>
+        <div class="progress-line"></div>
+        <div class="progress-step" id="step-3">3</div>
+      </div>
+      
+      <div class="onboarding-demo" id="onboarding-demo">
+        <h2 class="demo-heading">Here's Cheatly on <span id="demo-platform"></span></h2>
+        <p class="demo-sub">Watch it answer a question — this is exactly what you'll see</p>
+        <div class="demo-stage">
+          <div class="demo-quiz-card">
+            <div class="demo-quiz-header">
+              <span class="demo-quiz-dot"></span>
+              <span class="demo-quiz-dot"></span>
+              <span class="demo-quiz-dot"></span>
+              <span class="demo-quiz-title" id="demo-quiz-title"></span>
+            </div>
+            <div class="demo-quiz-question" id="demo-quiz-question">
+              What is the derivative of x&sup2; + 2x + 1?
+            </div>
+            <div class="demo-quiz-options">
+              <label class="demo-quiz-option"><span class="demo-radio"></span> A. 2x&sup2; + 4x - 2</label>
+              <label class="demo-quiz-option"><span class="demo-radio"></span> B. x&sup2; + 2x + 1</label>
+              <label class="demo-quiz-option" data-correct><span class="demo-radio"></span> C. 2x + 2</label>
+              <label class="demo-quiz-option"><span class="demo-radio"></span> D. 2x&sup2; - 4x + 2</label>
+            </div>
+            <div class="demo-status" id="demo-status"></div>
+            <div class="demo-cursor" id="demo-cursor">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#0f172a" stroke="#fff" stroke-width="1.5"><path d="M5 3l14 8-6.5 1.5L9 19z"/></svg>
+            </div>
+          </div>
+        </div>
+        <button class="demo-replay hidden" id="demo-replay">&#8635; Replay demo</button>
+      </div>
+
+      <div class="success-stories" id="success-stories">
+        <div class="stories-stats">
+          <div class="stat"><div class="stat-num">12,000+</div><div class="stat-label">students</div></div>
+          <div class="stat"><div class="stat-num">1.4M+</div><div class="stat-label">questions answered</div></div>
+          <div class="stat"><div class="stat-num">4.8&#9733;</div><div class="stat-label">average rating</div></div>
+        </div>
+        <div class="stories-grid" id="stories-grid">
+          <div class="story-card" data-platform="Canvas">
+            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <p class="story-quote">"Raised my bio quiz average from 71% to 96% in one semester. Every Canvas quiz, double-click, done."</p>
+            <div class="story-author"><span class="story-avatar">D</span><span>Destiny, Junior &bull; <span class="story-platform">Canvas</span></span></div>
+          </div>
+          <div class="story-card" data-platform="Quizlet">
+            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <p class="story-quote">"I went from failing chem to a B+ in three weeks. It even handles the diagram questions on Quizlet."</p>
+            <div class="story-author"><span class="story-avatar">M</span><span>Marcus, Sophomore &bull; <span class="story-platform">Quizlet</span></span></div>
+          </div>
+          <div class="story-card" data-platform="Google Forms">
+            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <p class="story-quote">"Finished a 40-question Google Forms exam in 12 minutes with a 98%. Invisible mode is a lifesaver."</p>
+            <div class="story-author"><span class="story-avatar">A</span><span>Aaliyah, Freshman &bull; <span class="story-platform">Google Forms</span></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="onboarding-cta" id="onboarding-cta">
+        <div class="selected-summary" id="selected-summary"></div>
+        <a href="onboarding-wins.html" class="btn btn-primary btn-large onboarding-btn">See Student Results</a>
+        <p class="onboarding-trust">Step 2 of 3 &bull; Real results up next</p>
+      </div>
+    </div>
+  </section>
+
+  <script src="auth.js"></script>
+  <script>
+    if (!window.CheatlyAuth || !CheatlyAuth.get()) window.location.href = "signup.html";
+  </script>
+  <script src="onboarding-demo.js"></script>
+  <script defer src="social-proof.js"></script>
+  <script defer src="analytics.js"></script>
+  <script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>

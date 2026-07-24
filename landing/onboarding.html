@@ -46,6 +46,7 @@
         <div class="progress-line"></div>
         <div class="progress-step" id="step-3">3</div>
       </div>
+      
       <h1>What platform do you use?</h1>
       <p class="onboarding-subtitle">Select your testing platform below, or search for it</p>
 
@@ -156,174 +157,6 @@
           </div>
         </div>
       </div>
-
-      <div class="onboarding-demo hidden" id="onboarding-demo">
-        <h2 class="demo-heading">Here's Cheatly on <span id="demo-platform"></span></h2>
-        <p class="demo-sub">Watch it answer a question — this is exactly what you'll see</p>
-        <div class="demo-stage">
-          <div class="demo-quiz-card">
-            <div class="demo-quiz-header">
-              <span class="demo-quiz-dot"></span>
-              <span class="demo-quiz-dot"></span>
-              <span class="demo-quiz-dot"></span>
-              <span class="demo-quiz-title" id="demo-quiz-title"></span>
-            </div>
-            <div class="demo-quiz-question" id="demo-quiz-question">
-              What is the derivative of x&sup2; + 2x + 1?
-            </div>
-            <div class="demo-quiz-options">
-              <label class="demo-quiz-option"><span class="demo-radio"></span> A. 2x&sup2; + 4x - 2</label>
-              <label class="demo-quiz-option"><span class="demo-radio"></span> B. x&sup2; + 2x + 1</label>
-              <label class="demo-quiz-option" data-correct><span class="demo-radio"></span> C. 2x + 2</label>
-              <label class="demo-quiz-option"><span class="demo-radio"></span> D. 2x&sup2; - 4x + 2</label>
-            </div>
-            <div class="demo-status" id="demo-status"></div>
-            <div class="demo-cursor" id="demo-cursor">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="#0f172a" stroke="#fff" stroke-width="1.5"><path d="M5 3l14 8-6.5 1.5L9 19z"/></svg>
-            </div>
-          </div>
-        </div>
-        <button class="demo-replay hidden" id="demo-replay">&#8635; Replay demo</button>
-      </div>
-
-      <div class="success-stories hidden" id="success-stories">
-        <div class="stories-stats">
-          <div class="stat"><div class="stat-num">12,000+</div><div class="stat-label">students</div></div>
-          <div class="stat"><div class="stat-num">1.4M+</div><div class="stat-label">questions answered</div></div>
-          <div class="stat"><div class="stat-num">4.8&#9733;</div><div class="stat-label">average rating</div></div>
-        </div>
-        <div class="stories-grid" id="stories-grid">
-          <div class="story-card" data-platform="Canvas">
-            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-            <p class="story-quote">"Raised my bio quiz average from 71% to 96% in one semester. Every Canvas quiz, double-click, done."</p>
-            <div class="story-author"><span class="story-avatar">D</span><span>Destiny, Junior &bull; <span class="story-platform">Canvas</span></span></div>
-          </div>
-          <div class="story-card" data-platform="Quizlet">
-            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-            <p class="story-quote">"I went from failing chem to a B+ in three weeks. It even handles the diagram questions on Quizlet."</p>
-            <div class="story-author"><span class="story-avatar">M</span><span>Marcus, Sophomore &bull; <span class="story-platform">Quizlet</span></span></div>
-          </div>
-          <div class="story-card" data-platform="Google Forms">
-            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-            <p class="story-quote">"Finished a 40-question Google Forms exam in 12 minutes with a 98%. Invisible mode is a lifesaver."</p>
-            <div class="story-author"><span class="story-avatar">A</span><span>Aaliyah, Freshman &bull; <span class="story-platform">Google Forms</span></span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="onboarding-wins hidden" id="onboarding-wins">
-        <h2 class="wins-inline-heading">Wall of Wins</h2>
-        <p class="wins-inline-sub">Screenshots students sent us after their exams. Your grade could be next.</p>
-      <div class="wins-carousel" id="wins-carousel">
-        <button class="carousel-arrow prev" id="carousel-prev" aria-label="Previous">&#8249;</button>
-
-        <div class="carousel-viewport">
-          <div class="carousel-track" id="carousel-track">
-
-            <div class="win-slide">
-              <div class="exam-shot exam-canvas">
-                <div class="exam-bar"><span class="exam-dot"></span><span class="exam-dot"></span><span class="exam-dot"></span><span class="exam-url">canvas.instructure.com</span></div>
-                <div class="exam-body">
-                  <div class="exam-course">BIO 201 &mdash; Midterm Exam</div>
-                  <div class="exam-score-row">
-                    <div class="score-ring score-96"><span>96%</span></div>
-                    <div class="exam-detail">
-                      <div class="exam-grade">48 / 50 correct</div>
-                      <div class="exam-note">Submitted &bull; Attempt 1 of 1</div>
-                    </div>
-                  </div>
-                  <div class="exam-badge">&#10003; Quiz submitted successfully</div>
-                </div>
-              </div>
-              <div class="win-caption"><strong>Destiny, Junior</strong> &mdash; "Went from a 71 average to this. Unreal."</div>
-            </div>
-
-            <div class="win-slide">
-              <div class="exam-shot exam-forms">
-                <div class="exam-bar"><span class="exam-dot"></span><span class="exam-dot"></span><span class="exam-dot"></span><span class="exam-url">docs.google.com/forms</span></div>
-                <div class="exam-body">
-                  <div class="exam-course">CHEM 110 &mdash; Unit 4 Exam</div>
-                  <div class="exam-score-row">
-                    <div class="score-ring score-98"><span>98%</span></div>
-                    <div class="exam-detail">
-                      <div class="exam-grade">39 / 40 points</div>
-                      <div class="exam-note">Your response has been recorded</div>
-                    </div>
-                  </div>
-                  <div class="exam-badge">&#10003; Finished in 12 minutes</div>
-                </div>
-              </div>
-              <div class="win-caption"><strong>Aaliyah, Freshman</strong> &mdash; "40 questions, 12 minutes, 98%. Invisible mode."</div>
-            </div>
-
-            <div class="win-slide">
-              <div class="exam-shot exam-quizlet">
-                <div class="exam-bar"><span class="exam-dot"></span><span class="exam-dot"></span><span class="exam-dot"></span><span class="exam-url">quizlet.com/test</span></div>
-                <div class="exam-body">
-                  <div class="exam-course">PSYCH 101 &mdash; Practice Test</div>
-                  <div class="exam-score-row">
-                    <div class="score-ring score-100"><span>100%</span></div>
-                    <div class="exam-detail">
-                      <div class="exam-grade">25 / 25 correct</div>
-                      <div class="exam-note">Best score this week</div>
-                    </div>
-                  </div>
-                  <div class="exam-badge">&#10003; Perfect score</div>
-                </div>
-              </div>
-              <div class="win-caption"><strong>Marcus, Sophomore</strong> &mdash; "First perfect score of my life. Not kidding."</div>
-            </div>
-
-            <div class="win-slide">
-              <div class="exam-shot exam-blackboard">
-                <div class="exam-bar"><span class="exam-dot"></span><span class="exam-dot"></span><span class="exam-dot"></span><span class="exam-url">blackboard.com</span></div>
-                <div class="exam-body">
-                  <div class="exam-course">HIST 230 &mdash; Final Exam</div>
-                  <div class="exam-score-row">
-                    <div class="score-ring score-94"><span>94%</span></div>
-                    <div class="exam-detail">
-                      <div class="exam-grade">47 / 50 correct</div>
-                      <div class="exam-note">Grade posted &bull; A</div>
-                    </div>
-                  </div>
-                  <div class="exam-badge">&#10003; Highest grade in section</div>
-                </div>
-              </div>
-              <div class="win-caption"><strong>Jake, Senior</strong> &mdash; "Passed the final I was sure I'd fail."</div>
-            </div>
-
-            <div class="win-slide">
-              <div class="exam-shot exam-moodle">
-                <div class="exam-bar"><span class="exam-dot"></span><span class="exam-dot"></span><span class="exam-dot"></span><span class="exam-url">moodle.university.edu</span></div>
-                <div class="exam-body">
-                  <div class="exam-course">ECON 205 &mdash; Weekly Quiz 8</div>
-                  <div class="exam-score-row">
-                    <div class="score-ring score-95"><span>95%</span></div>
-                    <div class="exam-detail">
-                      <div class="exam-grade">19 / 20 correct</div>
-                      <div class="exam-note">Attempt finished &bull; Graded</div>
-                    </div>
-                  </div>
-                  <div class="exam-badge">&#10003; 8th quiz above 90% in a row</div>
-                </div>
-              </div>
-              <div class="win-caption"><strong>Maya, Freshman</strong> &mdash; "Every single quiz since I installed it."</div>
-            </div>
-
-          </div>
-        </div>
-
-        <button class="carousel-arrow next" id="carousel-next" aria-label="Next">&#8250;</button>
-      </div>
-
-      <div class="carousel-dots" id="carousel-dots"></div>
-      </div>
-
-      <div class="onboarding-cta hidden" id="onboarding-cta">
-        <div class="selected-summary" id="selected-summary"></div>
-        <a href="dashboard.html" class="btn btn-primary btn-large onboarding-btn">Continue to Dashboard</a>
-        <p class="onboarding-trust">You're all set &bull; Start answering questions in seconds</p>
-      </div>
     </div>
   </section>
 
@@ -332,21 +165,8 @@
     if (!window.CheatlyAuth || !CheatlyAuth.get()) window.location.href = "signup.html";
   </script>
   <script src="onboarding.js"></script>
-  <script src="wins.js"></script>
   <script defer src="social-proof.js"></script>
   <script defer src="analytics.js"></script>
   <script defer src="/_vercel/insights/script.js"></script>
-
-  <!-- GA4 CTA click tracking -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var checkoutBtn = document.querySelector('a.onboarding-btn');
-      if (checkoutBtn) {
-        checkoutBtn.addEventListener('click', function() {
-          gtag('event', 'click_continue_dashboard', { cta_location: 'onboarding' });
-        });
-      }
-    });
-  </script>
 </body>
 </html>
