@@ -5,9 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cheatly — What Platform Do You Use?</title>
   <meta name="description" content="Select your testing platform and see how Cheatly delivers 100% accuracy on any quiz." />
-  <meta name="theme-color" content="#0a0a14" />
+  <meta name="theme-color" content="#10b981" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="onboarding.css" />
+  <link rel="stylesheet" href="wins.css" />
   <link rel="icon" href="icon16.png" sizes="16x16" type="image/png" />
   <link rel="icon" href="icon48.png" sizes="48x48" type="image/png" />
   <link rel="icon" href="icon128.png" sizes="128x128" type="image/png" />
@@ -27,7 +31,7 @@
   <nav class="nav">
     <div class="container nav-inner">
       <a href="/" class="nav-logo">
-        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <img src="icon48.png" alt="Cheatly" class="logo-img" width="28" height="28" />
         <span>Cheatly</span>
       </a>
     </div>
@@ -36,10 +40,15 @@
   <section class="onboarding-hero">
     <div class="container">
       <div class="onboarding-progress">
-        <div class="progress-step active">1</div>
+        <div class="progress-step active" id="step-1">1</div>
         <div class="progress-line"></div>
-        <div class="progress-step">2</div>
+        <div class="progress-step" id="step-2">2</div>
+        <div class="progress-line"></div>
+        <div class="progress-step" id="step-3">3</div>
+        <div class="progress-line"></div>
+        <div class="progress-step" id="step-4">4</div>
       </div>
+      
       <h1>What platform do you use?</h1>
       <p class="onboarding-subtitle">Select your testing platform below, or search for it</p>
 
@@ -150,28 +159,16 @@
           </div>
         </div>
       </div>
-
-      <div class="onboarding-cta hidden" id="onboarding-cta">
-        <div class="selected-summary" id="selected-summary"></div>
-        <a href="https://answersnap-backend.fly.dev/checkout" class="btn btn-primary btn-large onboarding-btn">Continue to Free Trial</a>
-        <p class="onboarding-trust">7-day free trial &bull; No charge today &bull; Cancel anytime</p>
-      </div>
     </div>
   </section>
 
-  <script src="onboarding.js"></script>
-  <script defer src="/_vercel/insights/script.js"></script>
-
-  <!-- GA4 CTA click tracking -->
+  <script src="auth.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var checkoutBtn = document.querySelector('a.onboarding-btn');
-      if (checkoutBtn) {
-        checkoutBtn.addEventListener('click', function() {
-          gtag('event', 'click_continue_trial', { cta_location: 'onboarding' });
-        });
-      }
-    });
+    if (!window.CheatlyAuth || !CheatlyAuth.get()) window.location.href = "signup.html";
   </script>
+  <script src="onboarding.js"></script>
+  <script defer src="social-proof.js"></script>
+  <script defer src="analytics.js"></script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

@@ -3,14 +3,15 @@
  *
  * Handles:
  * 1. Screenshot capture via chrome.tabs.captureVisibleTab
- * 2. AI vision API call (OpenAI GPT-4o)
- * 3. Message routing between content script and popup
+ * 2. AI vision API call (OpenAI GPT-4.1)
+ * 3. Auth token management + subscription gating
+ * 4. Message routing between content script and popup
  */
 
-const BACKEND_URL = "https://answersnap-backend.fly.dev";
+const BACKEND_URL = "https://cheatly-backend.fly.dev";
 
 const AUTO_DISABLE_ALARM = "auto-disable";
-const AUTO_DISABLE_MINUTES = 120; // 2 hours
+const AUTO_DISABLE_MINUTES = 60; // 1 hour
 
 const DEFAULT_SETTINGS = {
   enabled: true,
@@ -22,6 +23,11 @@ const DEFAULT_SETTINGS = {
 async function getSettings() {
   const result = await chrome.storage.local.get("settings");
   return { ...DEFAULT_SETTINGS, ...result.settings };
+}
+
+async function getAuthToken() {
+  const result = await chrome.storage.local.get("authToken");
+  return result.authToken || null;
 }
 
 async function captureScreenshot() {
@@ -36,16 +42,31 @@ async function captureScreenshot() {
 }
 
 async function queryBackend(screenshotDataUrl, selectedText) {
+  const token = await getAuthToken();
+
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${BACKEND_URL}/answer`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       screenshot: screenshotDataUrl,
       selectedText: selectedText || "",
     }),
   });
+
+  if (response.status === 401) {
+    throw new Error("LOGIN_REQUIRED");
+  }
+  if (response.status === 403) {
+    throw new Error("SUBSCRIPTION_REQUIRED");
+  }
+  if (response.status === 429) {
+    throw new Error("RATE_LIMITED");
+  }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
@@ -83,7 +104,19 @@ async function handlePortMessage(message, port) {
       }
       // Capture screenshot here so it never round-trips through the content script
       const screenshot = await captureScreenshot();
-      const answer = await queryBackend(screenshot, message.selectedText);
+      let answer;
+      try {
+        answer = await queryBackend(screenshot, message.selectedText);
+      } catch (err) {
+        if (err.message !== "RATE_LIMITED") throw err;
+        // Locally enabled but the server usage window has expired — the two
+        // can drift apart (extension reinstalled, alarm lost, clock skew),
+        // which otherwise leaves the user stuck on 429 with no way out
+        // except toggling. Start a fresh window and retry once.
+        await resetServerSession();
+        startAutoDisableTimer();
+        answer = await queryBackend(screenshot, message.selectedText);
+      }
 
       port.postMessage({ answer, displayMode: settings.displayMode });
     } else if (message.type === "GET_SETTINGS") {
@@ -107,18 +140,66 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === "SAVE_SETTINGS") {
-    chrome.storage.local.set({ settings: message.settings }).then(() => {
+    chrome.storage.local.set({ settings: message.settings }).then(async () => {
       // Manage auto-disable timer on settings change from popup
       if (message.settings.enabled) {
         startAutoDisableTimer();
+        // Reset server-side session when user re-enables
+        await resetServerSession();
       } else {
         clearAutoDisableTimer();
       }
+      // Content scripts cache `enabled`; without this, open tabs keep the
+      // stale value until reload and double-clicks silently do nothing.
+      await broadcastToggleState(message.settings.enabled);
       sendResponse({ ok: true });
     });
     return true;
   }
+
+  if (message.type === "RESTART_EXTENSION") {
+    // One-click recovery from the popup: force-enable, start a fresh
+    // server usage window, and sync every open tab.
+    (async () => {
+      const settings = await getSettings();
+      settings.enabled = true;
+      await chrome.storage.local.set({ settings });
+      await resetServerSession();
+      startAutoDisableTimer();
+      await broadcastToggleState(true);
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
 });
+
+// ── Tab Broadcast ────────────────────────────────────────────────────────────
+
+async function broadcastToggleState(enabled) {
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab.id) continue;
+    chrome.tabs.sendMessage(tab.id, {
+      type: "TOGGLE_STATE",
+      enabled,
+    }).catch(() => {});
+  }
+}
+
+// ── Server Session Reset ────────────────────────────────────────────────────
+
+async function resetServerSession() {
+  const token = await getAuthToken();
+  if (!token) return;
+  try {
+    await fetch(`${BACKEND_URL}/auth/reset-session`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (_err) {
+    // Non-critical — server will start a new session on next /answer call
+  }
+}
 
 // ── Auto-Disable Timer ──────────────────────────────────────────────────────
 
@@ -141,14 +222,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   settings.enabled = false;
   await chrome.storage.local.set({ settings });
 
-  // Notify active tab so toast shows
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id) {
-    chrome.tabs.sendMessage(tab.id, {
-      type: "TOGGLE_STATE",
-      enabled: false,
-    }).catch(() => {});
-  }
+  // Notify every tab — each content script caches `enabled`, and a tab
+  // that misses this update keeps double-click handling silently dead.
+  await broadcastToggleState(false);
 });
 
 // Start timer on install/startup if enabled
@@ -173,19 +249,11 @@ chrome.commands.onCommand.addListener(async (command) => {
     // Manage auto-disable timer
     if (settings.enabled) {
       startAutoDisableTimer();
+      resetServerSession();
     } else {
       clearAutoDisableTimer();
     }
 
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-    if (tab?.id) {
-      chrome.tabs.sendMessage(tab.id, {
-        type: "TOGGLE_STATE",
-        enabled: settings.enabled,
-      });
-    }
+    await broadcastToggleState(settings.enabled);
   }
 });

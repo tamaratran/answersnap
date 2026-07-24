@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cheatly — Instant AI Answers On Any Question</title>
   <meta name="description" content="Double-click any question on your screen and get the answer instantly. Works on Canvas, Blackboard, Google Forms, and any website. AI-powered Chrome extension." />
-  <meta name="theme-color" content="#0a0a14" />
+  <meta name="theme-color" content="#10b981" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cheatly" />
   <meta property="og:title" content="Cheatly — Instant AI Answers On Any Question" />
   <meta property="og:description" content="Double-click any question on your screen and get the answer instantly. Works on Canvas, Blackboard, Google Forms, and any website." />
-  <meta property="og:url" content="https://cheatly.xyz/" />
-  <meta property="og:image" content="https://cheatly.xyz/og-image.png" />
+  <meta property="og:url" content="https://cheatly.io/" />
+  <meta property="og:image" content="https://cheatly.io/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
 
@@ -21,8 +21,11 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Cheatly — Instant AI Answers On Any Question" />
   <meta name="twitter:description" content="Double-click any question on your screen and get the answer instantly. Works on any website." />
-  <meta name="twitter:image" content="https://cheatly.xyz/og-image.png" />
+  <meta name="twitter:image" content="https://cheatly.io/og-image.png" />
 
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="icon16.png" sizes="16x16" type="image/png" />
   <link rel="icon" href="icon48.png" sizes="48x48" type="image/png" />
@@ -37,13 +40,17 @@
     gtag('js', new Date());
     gtag('config', 'G-CF2V24H2RE');
   </script>
+
+  <!-- Meta Pixel + TikTok Pixel -->
+  <script defer src="tracking.js"></script>
+  <script src="auth.js"></script>
 </head>
 <body class="has-sticky-cta">
   <!-- Nav -->
   <nav class="nav">
     <div class="container nav-inner">
       <a href="#" class="nav-logo">
-        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <img src="icon48.png" alt="Cheatly" class="logo-img" width="28" height="28" />
         <span>Cheatly</span>
       </a>
       <div class="nav-links">
@@ -52,9 +59,29 @@
         <a href="#how-it-works">How It Works</a>
         <a href="#pricing">Pricing</a>
         <a href="#faq">FAQ</a>
+        <a href="/account.html" data-account-link hidden>Manage Subscription</a>
       </div>
+      <button class="nav-hamburger" aria-label="Menu" onclick="this.classList.toggle('open');document.querySelector('.nav-mobile-menu').classList.toggle('open')">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </nav>
+  <div class="nav-mobile-menu">
+    <a href="#features" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">Features</a>
+    <a href="#demo" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">Demo</a>
+    <a href="#how-it-works" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">How It Works</a>
+    <a href="#pricing" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">Pricing</a>
+    <a href="#faq" onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">FAQ</a>
+    <a href="/account.html" data-account-link hidden onclick="document.querySelector('.nav-hamburger').classList.remove('open');this.parentElement.classList.remove('open')">Manage Subscription</a>
+  </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (window.CheatlyAuth && CheatlyAuth.get()) {
+        var links = document.querySelectorAll('[data-account-link]');
+        for (var i = 0; i < links.length; i++) links[i].hidden = false;
+      }
+    });
+  </script>
 
   <!-- Hero -->
   <section class="hero">
@@ -67,9 +94,10 @@
         Works on any website, any platform.
       </p>
       <div class="hero-actions">
-        <a href="onboarding.html" class="btn btn-primary">Get Started</a>
+        <a href="signup.html" class="btn btn-primary">Try Free for 3 Days</a>
         <a href="#demo" class="btn btn-secondary">See Demo</a>
       </div>
+      <p style="font-size:14px; color:#475569; margin-bottom: 32px;">Then $25/month &bull; Cancel anytime</p>
       <div class="trust-bar">
         <span>&#10003; Cancel Anytime</span>
         <span>&#10003; Satisfaction Guaranteed</span>
@@ -217,15 +245,15 @@
           <span class="price-new">$25</span>
           <span class="price-period">/month</span>
         </div>
-        <p class="pricing-trial">Try free for 7 days — cancel anytime before your trial ends</p>
+        <p class="pricing-trial">Try free for 3 days — cancel anytime before your trial ends</p>
         <ul class="pricing-features">
           <li>&#10003; Unlimited questions</li>
           <li>&#10003; All question types — MC, fill-in, essays &amp; more</li>
           <li>&#10003; Works on any website</li>
           <li>&#10003; All three display modes</li>
         </ul>
-        <a href="onboarding.html" class="btn btn-primary btn-large">Get Started</a>
-        <p class="pricing-trust">No charge for 7 days &bull; Cancel Anytime</p>
+        <a href="signup.html" class="btn btn-primary btn-large">Try Free for 3 Days</a>
+        <p class="pricing-trust">No charge for 3 days &bull; Cancel Anytime</p>
       </div>
     </div>
   </section>
@@ -354,7 +382,7 @@
         <div class="step">
           <div class="step-number">1</div>
           <h3>Install the Extension</h3>
-          <p>Load the unpacked extension in Chrome or install from the Chrome Web Store.</p>
+          <p>Install Cheatly from the Chrome Web Store with one click.</p>
         </div>
         <div class="step-arrow">&rarr;</div>
         <div class="step">
@@ -423,6 +451,14 @@
           <summary>How do the display modes work?</summary>
           <p><strong>Invisible:</strong> The answer is copied to your clipboard silently — nothing appears on screen. <strong>Sneaky:</strong> A tiny dot appears in the corner that expands on hover. <strong>Homework:</strong> A full overlay panel shows the answer with a loading animation.</p>
         </details>
+        <details class="faq-item">
+          <summary>How do I cancel my subscription?</summary>
+          <p>You can cancel anytime from the <a href="/account.html">Manage Subscription</a> page — sign in, click Cancel Subscription, and you'll keep access until the end of your billing period with no further charges.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What's your refund policy?</summary>
+          <p>If something went wrong with your purchase, email us at <a href="mailto:support@cheatly.io">support@cheatly.io</a> and we'll make it right. Include the email on your account so we can find your subscription.</p>
+        </details>
       </div>
     </div>
   </section>
@@ -430,31 +466,34 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      <p>&copy; 2025 Cheatly. Built with AI.</p>
+      <p>&copy; 2025 Cheatly. Built with AI. &middot; <a href="/account.html">Manage Subscription</a></p>
     </div>
   </footer>
 
   <!-- Sticky Bottom CTA Bar -->
   <div class="sticky-cta-bar">
     <div class="container sticky-cta-inner">
-      <span class="sticky-cta-text">Start Free Trial — <strong>7 Days Free</strong></span>
-      <a href="onboarding.html" class="btn btn-primary sticky-cta-btn">Get Started</a>
+      <span class="sticky-cta-text">Start Free Trial — <strong>3 Days Free</strong></span>
+      <a href="signup.html" class="btn btn-primary sticky-cta-btn">Try Free for 3 Days</a>
     </div>
   </div>
 
   <script src="script.js"></script>
+  <script defer src="social-proof.js"></script>
+  <script defer src="analytics.js"></script>
   <script defer src="/_vercel/insights/script.js"></script>
 
   <!-- GA4 CTA click tracking -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      document.querySelectorAll('a[href="onboarding.html"]').forEach(function(link) {
+      document.querySelectorAll('a[href="signup.html"]').forEach(function(link) {
         var location = 'unknown';
         if (link.closest('.hero')) location = 'hero';
         else if (link.closest('.pricing')) location = 'pricing';
         else if (link.closest('.sticky-cta-bar')) location = 'sticky_bar';
         link.addEventListener('click', function() {
           gtag('event', 'click_get_started', { cta_location: location });
+          if (window.cheatlyTrack) window.cheatlyTrack.initiateCheckout();
         });
       });
     });

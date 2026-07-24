@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout — Cheatly</title>
+  <meta name="description" content="Start your Cheatly Pro free trial." />
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" sizes="16x16" href="icon16.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="icon48.png" />
+  <link rel="apple-touch-icon" href="icon128.png" />
+  <style>
+    .checkout-card { max-width: 480px; }
+    .checkout-card h1 { font-size: 1.55rem; margin-bottom: 4px; }
+    .checkout-card .auth-subtitle { font-size: 0.88rem; margin-bottom: 16px; }
+    .form-error:empty { display: none; }
+    .checkout-card .auth-subtitle b { color: var(--text-primary); }
+    #payment-element { margin: 0 0 14px; }
+    #express-checkout-element { margin: 0 0 4px; }
+    .pay-divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 12px 0; color: var(--text-muted); font-size: 0.78rem;
+    }
+    .pay-divider::before, .pay-divider::after {
+      content: ""; flex: 1; height: 1px; background: var(--border);
+    }
+    .checkout-secure {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 12px;
+    }
+  </style>
+  <script defer src="analytics.js"></script>
+  <script defer src="/_vercel/insights/script.js"></script>
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-logo">
+        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <span>Cheatly</span>
+      </a>
+      <div class="nav-links">
+        <span id="user-email" class="nav-email"></span>
+        <a href="dashboard.html">Back to Dashboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="auth-section">
+    <div class="container">
+      <div class="auth-card checkout-card">
+        <h1>Start your 3-day free trial</h1>
+        <p class="auth-subtitle" id="status-line"><b>$0.00 due today</b> · then $25/month after your 3-day trial · cancel anytime</p>
+
+        <form id="payment-form" hidden>
+          <div id="express-checkout-element"></div>
+          <div class="pay-divider" id="pay-divider" hidden>or pay with card</div>
+          <div id="payment-element"></div>
+          <p class="form-error" id="payment-error"></p>
+          <button type="submit" id="submit-btn" class="btn btn-primary btn-block">Start Free Trial</button>
+        </form>
+
+        <p class="checkout-secure">🔒 Payments secured by Stripe. Your card won't be charged until your 3-day trial ends.</p>
+
+      </div>
+    </div>
+  </section>
+
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="auth.js"></script>
+  <script>
+    (async () => {
+      const statusLine = document.getElementById("status-line");
+      const form = document.getElementById("payment-form");
+      const errorEl = document.getElementById("payment-error");
+      const submitBtn = document.getElementById("submit-btn");
+
+      if (!CheatlyAuth.get()) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      async function activate(setupIntentId) {
+        statusLine.textContent = "Activating your trial…";
+        form.hidden = true;
+        const me = await api("/api/subscribe/activate", {
+          method: "POST",
+          body: JSON.stringify({ setup_intent_id: setupIntentId }),
+        });
+        if (me.subscribed) {
+          window.location.href = "dashboard.html?checkout=success";
+        } else {
+          throw new Error("Subscription could not be activated. Please contact support.");
+        }
+      }
+
+      // Handle return from a redirect-based payment method
+      const params = new URLSearchParams(location.search);
+      if (params.get("setup_intent") && params.get("redirect_status") === "succeeded") {
+        try {
+          await activate(params.get("setup_intent"));
+          return;
+        } catch (err) {
+          statusLine.textContent = err.message;
+          return;
+        }
+      }
+
+      let setup;
+      try {
+        setup = await api("/api/subscribe/setup", { method: "POST" });
+      } catch (err) {
+        if (err.message === "Already subscribed") {
+          window.location.href = "dashboard.html";
+          return;
+        }
+        statusLine.textContent = err.message;
+        return;
+      }
+
+      document.getElementById("user-email").textContent = setup.email;
+      statusLine.innerHTML = "<b>$0.00 due today</b> · then $25/month after your 3-day trial · cancel anytime";
+
+      const stripe = Stripe(setup.publishable_key);
+      const elements = stripe.elements({
+        clientSecret: setup.client_secret,
+        appearance: {
+          theme: "stripe",
+          variables: { colorPrimary: "#10b981", borderRadius: "8px" },
+        },
+      });
+      elements.create("payment").mount("#payment-element");
+      form.hidden = false;
+
+      async function confirmAndActivate() {
+        const result = await stripe.confirmSetup({
+          elements,
+          confirmParams: { return_url: window.location.origin + "/checkout.html" },
+          redirect: "if_required",
+        });
+        if (result.error) throw new Error(result.error.message);
+        await activate(result.setupIntent.id);
+      }
+
+      // One-tap Apple Pay / Google Pay buttons (shown only on supported devices)
+      const expressEl = elements.create("expressCheckout");
+      expressEl.mount("#express-checkout-element");
+      expressEl.on("ready", (event) => {
+        if (event.availablePaymentMethods) {
+          document.getElementById("pay-divider").hidden = false;
+        }
+      });
+      expressEl.on("confirm", async () => {
+        errorEl.textContent = "";
+        try {
+          await confirmAndActivate();
+        } catch (err) {
+          errorEl.textContent = err.message;
+          form.hidden = false;
+        }
+      });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorEl.textContent = "";
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Processing…";
+        try {
+          await confirmAndActivate();
+        } catch (err) {
+          errorEl.textContent = err.message;
+          form.hidden = false;
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Start Free Trial";
+          statusLine.innerHTML = "<b>$0.00 due today</b> · then $25/month after your 3-day trial · cancel anytime";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

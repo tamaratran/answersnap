@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Cheatly</title>
+  <meta name="description" content="Your Cheatly account dashboard." />
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" sizes="16x16" href="icon16.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="icon48.png" />
+  <link rel="apple-touch-icon" href="icon128.png" />
+  <style>
+    .dashboard-card { max-width: 480px; }
+    .dashboard-card h1 { font-size: 1.55rem; margin-bottom: 4px; }
+    .dashboard-card .auth-subtitle { font-size: 0.88rem; margin-bottom: 14px; }
+    .dash-pricing-row {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .dash-pricing-row .pricing-price { margin: 0; }
+    .dash-pricing-row .pricing-badge { white-space: nowrap; }
+    @media (max-width: 520px) {
+      .dash-pricing-row { flex-direction: column; gap: 8px; }
+      .dash-pricing-row .pricing-badge { font-size: 0.72rem; padding: 4px 12px; }
+      .dash-features li { padding-left: 18px; text-indent: -18px; }
+      .result-course { flex-wrap: wrap; row-gap: 2px; font-size: 0.8rem; }
+      .result-course .grade-status { white-space: nowrap; }
+    }
+    .checkout-proof {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    .proof-head {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; margin-bottom: 12px;
+    }
+    .proof-avatars { display: flex; }
+    .proof-avatars .proof-avatar { margin-left: -8px; border: 2px solid var(--bg-card); }
+    .proof-avatars .proof-avatar:first-child { margin-left: 0; }
+    .proof-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 0.68rem; font-weight: 700; flex-shrink: 0;
+    }
+    .proof-head-text {
+      font-size: 0.85rem; color: var(--text-secondary); line-height: 1.35;
+    }
+    .proof-head-text b { color: var(--text-primary); }
+    .proof-stars { color: var(--orange); letter-spacing: 1px; font-size: 0.8rem; }
+    .result-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+    .result-row + .result-row { border-top: 1px solid var(--border); }
+    .result-ring {
+      width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%;
+      background:
+        radial-gradient(closest-side, var(--bg-card) 78%, transparent 79% 100%),
+        conic-gradient(var(--accent) 100%, var(--border) 0);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.82rem; font-weight: 800; color: var(--text-primary);
+    }
+    .result-info { flex: 1; min-width: 0; }
+    .result-course {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.82rem; font-weight: 600; color: var(--text-primary);
+    }
+    .result-course .grade-status {
+      font-size: 0.66rem; font-weight: 600;
+      color: var(--accent-light); background: var(--accent-glow);
+      border-radius: 999px; padding: 1px 8px;
+    }
+    .result-quote {
+      font-size: 0.78rem; color: var(--text-secondary);
+      margin: 2px 0 0; line-height: 1.35;
+    }
+    .result-quote b { color: var(--text-primary); }
+    .dash-features {
+      list-style: none; padding: 0; margin: 0 0 16px;
+      text-align: left; font-size: 0.85rem; color: var(--text-secondary);
+    }
+    .dash-features li { padding: 3px 0; }
+    .dash-features li::before { content: "\2713  "; color: var(--accent); font-weight: 700; }
+    #paywall .auth-switch { margin-top: 10px; }
+  </style>
+  <script defer src="analytics.js"></script>
+  <script defer src="/_vercel/insights/script.js"></script>
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-logo">
+        <img src="icon48.png" alt="Cheatly logo" width="28" height="28" />
+        <span>Cheatly</span>
+      </a>
+      <div class="nav-links">
+        <span id="user-email" class="nav-email"></span>
+        <a href="#" id="logout-link">Log Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="auth-section">
+    <div class="container">
+      <div class="auth-card dashboard-card">
+        <h1 id="dash-title">Your Dashboard</h1>
+        <p class="auth-subtitle" id="status-line">Loading your account…</p>
+
+        <div id="paywall" class="hidden">
+          <div class="dash-pricing-row">
+            <div class="pricing-badge">50% Off — Limited Time</div>
+            <div class="pricing-price">
+              <span class="price-old">$50</span>
+              <span class="price-new">$25</span>
+              <span class="price-period">/month</span>
+            </div>
+          </div>
+
+          <div class="checkout-proof">
+            <div class="proof-head">
+              <span class="proof-avatars">
+                <span class="proof-avatar" style="background:#0ea5e9">JM</span>
+                <span class="proof-avatar" style="background:#8b5cf6">DK</span>
+                <span class="proof-avatar" style="background:#f97316">AR</span>
+              </span>
+              <span class="proof-head-text">
+                <span class="proof-stars">★★★★★</span><br />
+                Trusted by <b>10,000+ students</b> worldwide
+              </span>
+            </div>
+
+            <div class="result-row">
+              <span class="result-ring">100</span>
+              <span class="result-info">
+                <span class="result-course">BIO 201 — Final Exam <span class="grade-status">100/100 ✓</span></span>
+                <p class="result-quote"><b>Jasmine M.</b> — "First 100 I've ever gotten on a bio final."</p>
+              </span>
+            </div>
+
+            <div class="result-row">
+              <span class="result-ring">50</span>
+              <span class="result-info">
+                <span class="result-course">STAT 1350 — Midterm 2 <span class="grade-status">50/50 ✓</span></span>
+                <p class="result-quote"><b>Daniel K.</b> — "Went from a C+ average to top of the curve."</p>
+              </span>
+            </div>
+          </div>
+
+          <ul class="dash-features">
+            <li>Unlimited questions — every subject, every platform</li>
+            <li>100% invisible mode &amp; silent auto-fill</li>
+            <li>Works on Canvas, Google Forms, Quizlet &amp; more</li>
+          </ul>
+
+          <a href="checkout.html" id="checkout-link" class="btn btn-primary btn-block">Start Free Trial</a>
+          <p class="auth-switch">3-day free trial &bull; No charge today &bull; Cancel anytime</p>
+        </div>
+
+        <div id="subscribed" class="hidden">
+          <p class="dash-active">&#10003; Cheatly Pro is active</p>
+          <ol class="dash-steps">
+            <li>Install the Cheatly Chrome extension</li>
+            <li>Double-click any question on any website</li>
+            <li>The answer fills in automatically</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="auth.js"></script>
+  <script>
+    (async () => {
+      try {
+        const me = await api("/api/me");
+        document.getElementById("user-email").textContent = me.email;
+        if (me.subscribed) {
+          document.getElementById("status-line").textContent = "You're all set.";
+          document.getElementById("subscribed").classList.remove("hidden");
+        } else {
+          const fromCheckout =
+            new URLSearchParams(location.search).get("checkout") === "success";
+          if (!fromCheckout) document.getElementById("dash-title").textContent = "Unlock Cheatly Pro";
+          document.getElementById("status-line").textContent = fromCheckout
+            ? "Payment received — your subscription will activate momentarily. Refresh in a few seconds."
+            : "One step left: start your free trial.";
+          document.getElementById("paywall").classList.remove("hidden");
+        }
+      } catch (err) {
+        window.location.href = "login.html";
+      }
+    })();
+    document.getElementById("logout-link").addEventListener("click", async (e) => {
+      e.preventDefault();
+      try { await api("/api/logout", { method: "POST" }); } catch (_) {}
+      if (window.CheatlyAuth) CheatlyAuth.clear();
+      window.location.href = "index.html";
+    });
+  </script>
+</body>
+</html>

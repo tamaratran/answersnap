@@ -64,8 +64,13 @@
   }
 
   function showAnswer(answer, _mode, clickTarget) {
-    // Auto-fill the answer on the page silently
-    autoFillAnswers(answer, clickTarget);
+    // Auto-fill the answer on the page silently. If nothing on the page
+    // could be filled, surface the answer in a toast so the user still
+    // gets a result instead of silence.
+    const filled = autoFillAnswers(answer, clickTarget);
+    if (!filled) {
+      showToast(`Answer: ${answer}`, 6000);
+    }
   }
 
   function showError(message) {
@@ -79,7 +84,7 @@
     }
   }
 
-  function showToast(text) {
+  function showToast(text, duration = 2000) {
     const toast = document.createElement("div");
     toast.className = "answersnap-toast";
     toast.textContent = text;
@@ -92,7 +97,7 @@
     setTimeout(() => {
       toast.classList.remove("answersnap-toast-visible");
       setTimeout(() => toast.remove(), 300);
-    }, 2000);
+    }, duration);
   }
 
   function escapeHtml(str) {
@@ -105,7 +110,7 @@
 
   function autoFillAnswers(answerText, clickTarget) {
     const parsed = parseAnswerLines(answerText);
-    if (parsed.length === 0) return;
+    if (parsed.length === 0) return false;
 
     const groups = collectOptionGroups();
 
@@ -114,6 +119,7 @@
       // Multi-select: only select within the single nearest group to avoid
       // cross-question pollution when AI returns answers for multiple questions
       const nearest = findNearestGroup(groups, clickTarget);
+      let anyFilled = false;
 
       if (nearest) {
         for (const entry of parsed) {
@@ -126,48 +132,78 @@
           if (match) {
             clickElement(match.element);
             highlightElement(match.element);
+            anyFilled = true;
           }
         }
       }
-      return;
+      return anyFilled;
     }
 
     const entry = parsed[0];
 
     if (entry.letter) {
       const el = selectChoice(groups, entry, clickTarget);
-      if (el) highlightElement(el);
+      if (el) {
+        highlightElement(el);
+        return true;
+      }
+      return false;
     } else if (entry.value) {
       // First try to match the value against the nearest option group's text
       // (handles cases like AI returning "11" for a radio option labeled "11")
       const nearest = findNearestGroup(groups, clickTarget);
-      const textMatch = nearest ? matchOptionByText(nearest.options, entry.value) : null;
+      const textMatch = nearest ? matchOptionByExactText(nearest.options, entry.value) : null;
       if (textMatch) {
         clickElement(textMatch.element);
         highlightElement(textMatch.element);
-      } else {
-        const input = findNearestTextInput(clickTarget);
-        if (input) {
-          fillTextInput(input, entry.value);
-          highlightElement(input);
-        }
+        return true;
       }
+      const input = findNearestTextInput(clickTarget);
+      if (input) {
+        fillTextInput(input, entry.value);
+        highlightElement(input);
+        return true;
+      }
+      return false;
     }
+    return false;
   }
+
+  // Max vertical distance (px) between the double-click and a candidate
+  // input before we consider it part of a different question. Kept below
+  // typical question-card spacing so a neighboring question's input never
+  // swallows an answer.
+  const MAX_FILL_DISTANCE_PX = 120;
 
   function findNearestTextInput(clickTarget) {
     if (!clickTarget) {
       const inputs = collectTextInputs();
       return inputs[0] || null;
     }
+    const clickRect = clickTarget.getBoundingClientRect();
+    const withinCutoff = (input) =>
+      Math.abs(input.getBoundingClientRect().top - clickRect.top) <= MAX_FILL_DISTANCE_PX;
+
     let el = clickTarget;
     for (let i = 0; i < 15 && el && el !== document.body; i++) {
       const input = el.querySelector('input[type="text"]:not(#answersnap-overlay input), textarea:not(#answersnap-overlay textarea)');
-      if (input) return input;
+      // Ancestor containers can span the whole quiz, so a found input may
+      // still belong to a distant question — enforce the distance cutoff.
+      if (input && withinCutoff(input)) return input;
       el = el.parentElement;
     }
-    const inputs = collectTextInputs();
-    return inputs[0] || null;
+    // Fallback: nearest input by vertical distance, but only within the cutoff
+    // so answers never land in a different question's input.
+    let best = null;
+    let bestDist = Infinity;
+    for (const input of collectTextInputs()) {
+      const dist = Math.abs(input.getBoundingClientRect().top - clickRect.top);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = input;
+      }
+    }
+    return bestDist <= MAX_FILL_DISTANCE_PX ? best : null;
   }
 
   function fillTextInput(input, value) {
@@ -392,8 +428,42 @@
     return null;
   }
 
+  // Normalize text for math-aware comparison: map Unicode math characters
+  // (superscripts, minus sign, times) to their ASCII forms, keep sign
+  // characters so "x^2 + x - 6" and "x\u00b2 + x + 6" stay distinguishable.
+  const SUPERSCRIPTS = { "\u2070": "0", "\u00b9": "1", "\u00b2": "2", "\u00b3": "3", "\u2074": "4", "\u2075": "5", "\u2076": "6", "\u2077": "7", "\u2078": "8", "\u2079": "9" };
+
+  function normalizeExpr(s) {
+    return s
+      .toLowerCase()
+      .replace(/[\u2070\u00b9\u00b2\u00b3\u2074-\u2079]/g, (c) => SUPERSCRIPTS[c])
+      .replace(/[\u2212\u2012-\u2015]/g, "-")
+      .replace(/[\u00d7]/g, "*")
+      .replace(/\^/g, "")
+      .replace(/[^a-z0-9+\-*/=.]/g, "");
+  }
+
+  function matchOptionByExactText(options, text) {
+    // Strict matching for bare values (e.g. "12"): require the whole option
+    // label to equal the value after normalization, so "12" can never match
+    // "120 miles" in a neighboring question.
+    if (!text) return null;
+    const normText = normalizeExpr(text);
+    if (!normText) return null;
+    for (const opt of options) {
+      if (opt.text && normalizeExpr(opt.text) === normText) return opt;
+    }
+    return null;
+  }
+
   function matchOptionByText(options, text) {
     if (!text) return null;
+    // Sign-aware exact match first (handles Unicode \u00b2/\u2212 in option labels
+    // vs ASCII ^2/- in model answers) so near-identical math expressions
+    // that differ only in a sign can never be confused.
+    const exact = matchOptionByExactText(options, text);
+    if (exact) return exact;
+
     const lower = text.toLowerCase();
     // Exact substring match
     for (const opt of options) {
@@ -404,21 +474,21 @@
       if (opt.text && lower.includes(opt.text.toLowerCase())) return opt;
     }
     // Fuzzy: normalize whitespace/special chars and compare
-    const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const normText = normalize(text);
+    const normText = normalizeExpr(text);
     let bestMatch = null;
     let bestScore = 0;
     for (const opt of options) {
       if (!opt.text) continue;
-      const normOpt = normalize(opt.text);
+      const normOpt = normalizeExpr(opt.text);
       if (!normOpt) continue;
       // Check if one contains the other after normalization
       if (normOpt.includes(normText) || normText.includes(normOpt)) return opt;
-      // Token overlap score
-      const tWords = new Set(text.toLowerCase().split(/\s+/));
-      const oWords = opt.text.toLowerCase().split(/\s+/);
-      const overlap = oWords.filter((w) => tWords.has(w)).length;
-      const score = overlap / Math.max(tWords.size, oWords.length);
+      // Token overlap score (deduped so repeated tokens like "+" can't
+      // inflate the score of a wrong option)
+      const tWords = new Set(normalizeExpr(text) ? text.toLowerCase().split(/\s+/).map((w) => normalizeExpr(w)) : []);
+      const oWords = new Set(opt.text.toLowerCase().split(/\s+/).map((w) => normalizeExpr(w)));
+      const overlap = [...oWords].filter((w) => w && tWords.has(w)).length;
+      const score = overlap / Math.max(tWords.size, oWords.size);
       if (score > bestScore && score > 0.5) {
         bestScore = score;
         bestMatch = opt;
@@ -568,13 +638,23 @@
         selectedText,
       });
 
-      if (response.error) {
+      if (response.error === "LOGIN_REQUIRED") {
+        showToast("Log in to Cheatly to use this feature");
+      } else if (response.error === "SUBSCRIPTION_REQUIRED") {
+        showToast("Subscribe to Cheatly to get answers");
+      } else if (response.error === "RATE_LIMITED") {
+        showToast("Session expired — re-enable Cheatly to continue");
+      } else if (response.error) {
         showError(response.error);
       } else {
         showAnswer(response.answer, response.displayMode, clickTarget);
       }
-    } catch (_err) {
-      showError("Failed to get answer. Check your settings.");
+    } catch (err) {
+      if (err && err.message === "TIMEOUT") {
+        showError("Cheatly timed out — try double-clicking again");
+      } else {
+        showError("Failed to get answer. Check your settings.");
+      }
     } finally {
       isLoading = false;
     }
@@ -582,22 +662,42 @@
 
   // ── Message Helpers ─────────────────────────────────────────────────────
 
-  function sendMessage(msg) {
+  const MESSAGE_TIMEOUT_MS = 75000;
+
+  function sendMessage(msg, timeoutMs = MESSAGE_TIMEOUT_MS) {
     return new Promise((resolve, reject) => {
+      let settled = false;
+      let timer = null;
+
+      const settle = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        fn(value);
+      };
+
       try {
         const port = chrome.runtime.connect({ name: "answersnap" });
+
+        timer = setTimeout(() => {
+          try { port.disconnect(); } catch (_e) { /* already gone */ }
+          settle(reject, new Error("TIMEOUT"));
+        }, timeoutMs);
+
         port.onMessage.addListener((response) => {
           port.disconnect();
-          resolve(response);
+          settle(resolve, response);
         });
         port.onDisconnect.addListener(() => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          }
+          // The service worker died (or the port closed) before replying.
+          // Always settle so the caller never hangs with isLoading stuck.
+          const message = chrome.runtime.lastError?.message ||
+            "Connection to Cheatly closed before a response arrived";
+          settle(reject, new Error(message));
         });
         port.postMessage(msg);
       } catch (err) {
-        reject(new Error(err.message || "Could not connect to service worker"));
+        settle(reject, new Error(err.message || "Could not connect to service worker"));
       }
     });
   }
