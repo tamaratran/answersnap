@@ -227,6 +227,9 @@ body {
 }
 
 .trust-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 4px 12px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
@@ -234,6 +237,11 @@ body {
   font-size: 12px;
   color: var(--text-secondary);
   transition: all 0.2s;
+}
+
+.trust-item img {
+  border-radius: 3px;
+  vertical-align: middle;
 }
 
 .trust-item:hover {
