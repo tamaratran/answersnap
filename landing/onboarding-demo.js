@@ -9,7 +9,6 @@ const demoCursor = document.getElementById('demo-cursor');
 const demoReplay = document.getElementById('demo-replay');
 const demoQuestion = document.getElementById('demo-quiz-question');
 const demoOptions = document.querySelectorAll('.demo-quiz-option');
-const storiesGrid = document.getElementById('stories-grid');
 const selectedSummary = document.getElementById('selected-summary');
 
 let demoTimers = [];
@@ -25,9 +24,6 @@ demoQuizTitle.textContent = platform + ' \u2014 Quiz 4';
 const strong = document.createElement('strong');
 strong.textContent = platform;
 selectedSummary.append(strong, ' \u2014 Supported with 100% accuracy');
-
-const match = storiesGrid.querySelector(`.story-card[data-platform="${CSS.escape(platform)}"]`);
-if (match) storiesGrid.prepend(match);
 
 function clearDemoTimers() {
   demoTimers.forEach(clearTimeout);
