@@ -321,12 +321,16 @@
 
       <div class="onboarding-cta hidden" id="onboarding-cta">
         <div class="selected-summary" id="selected-summary"></div>
-        <a href="https://cheatly-backend.fly.dev/checkout" class="btn btn-primary btn-large onboarding-btn">Continue to Free Trial</a>
-        <p class="onboarding-trust">3-day free trial &bull; No charge today &bull; Cancel anytime</p>
+        <a href="dashboard.html" class="btn btn-primary btn-large onboarding-btn">Continue to Dashboard</a>
+        <p class="onboarding-trust">You're all set &bull; Start answering questions in seconds</p>
       </div>
     </div>
   </section>
 
+  <script src="auth.js"></script>
+  <script>
+    if (!window.CheatlyAuth || !CheatlyAuth.get()) window.location.href = "signup.html";
+  </script>
   <script src="onboarding.js"></script>
   <script src="wins.js"></script>
   <script defer src="social-proof.js"></script>
@@ -339,7 +343,7 @@
       var checkoutBtn = document.querySelector('a.onboarding-btn');
       if (checkoutBtn) {
         checkoutBtn.addEventListener('click', function() {
-          gtag('event', 'click_continue_trial', { cta_location: 'onboarding' });
+          gtag('event', 'click_continue_dashboard', { cta_location: 'onboarding' });
         });
       }
     });
