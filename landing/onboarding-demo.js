@@ -9,7 +9,6 @@ const demoCursor = document.getElementById('demo-cursor');
 const demoReplay = document.getElementById('demo-replay');
 const demoQuestion = document.getElementById('demo-quiz-question');
 const demoOptions = document.querySelectorAll('.demo-quiz-option');
-const selectedSummary = document.getElementById('selected-summary');
 
 let demoTimers = [];
 let demoRunning = false;
@@ -21,10 +20,6 @@ try {
 
 demoPlatform.textContent = platform;
 demoQuizTitle.textContent = platform + ' \u2014 Quiz 4';
-const strong = document.createElement('strong');
-strong.textContent = platform;
-selectedSummary.append(strong, ' \u2014 Supported with 100% accuracy');
-
 function clearDemoTimers() {
   demoTimers.forEach(clearTimeout);
   demoTimers = [];
