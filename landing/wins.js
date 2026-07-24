@@ -9,6 +9,7 @@
 
   let index = 0;
   let autoTimer = null;
+  let hovering = false;
 
   slides.forEach((_, i) => {
     const dot = document.createElement('button');
@@ -31,6 +32,7 @@
 
   function restartAuto() {
     if (autoTimer) clearInterval(autoTimer);
+    if (hovering) return;
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     autoTimer = setInterval(() => goTo(index + 1), 5000);
   }
@@ -46,10 +48,14 @@
   });
 
   carousel.addEventListener('mouseenter', () => {
+    hovering = true;
     if (autoTimer) clearInterval(autoTimer);
   });
 
-  carousel.addEventListener('mouseleave', restartAuto);
+  carousel.addEventListener('mouseleave', () => {
+    hovering = false;
+    restartAuto();
+  });
 
   let touchStartX = null;
 
