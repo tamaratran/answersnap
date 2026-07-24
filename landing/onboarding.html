@@ -39,9 +39,11 @@
   <section class="onboarding-hero">
     <div class="container">
       <div class="onboarding-progress">
-        <div class="progress-step active">1</div>
+        <div class="progress-step active" id="step-1">1</div>
         <div class="progress-line"></div>
-        <div class="progress-step">2</div>
+        <div class="progress-step" id="step-2">2</div>
+        <div class="progress-line"></div>
+        <div class="progress-step" id="step-3">3</div>
       </div>
       <h1>What platform do you use?</h1>
       <p class="onboarding-subtitle">Select your testing platform below, or search for it</p>
@@ -49,84 +51,84 @@
       <div class="platform-grid">
         <button class="platform-card" data-platform="Canvas">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 7h10M7 12h10M7 17h6"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=instructure.com&amp;sz=64" alt="Canvas logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">Canvas</span>
           <span class="platform-check">&#10003;</span>
         </button>
         <button class="platform-card" data-platform="Blackboard">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="15" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=blackboard.com&amp;sz=64" alt="Blackboard logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">Blackboard</span>
           <span class="platform-check">&#10003;</span>
         </button>
         <button class="platform-card" data-platform="Google Forms">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h2M9 17h2"/><circle cx="9" cy="13" r="0.5" fill="currentColor"/><circle cx="9" cy="17" r="0.5" fill="currentColor"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=docs.google.com&amp;sz=64" alt="Google Forms logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">Google Forms</span>
           <span class="platform-check">&#10003;</span>
         </button>
         <button class="platform-card" data-platform="Google Classroom">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="12" cy="11" r="3"/><path d="M7 20c0-2.8 2.2-5 5-5s5 2.2 5 5"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=classroom.google.com&amp;sz=64" alt="Google Classroom logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">Google Classroom</span>
           <span class="platform-check">&#10003;</span>
         </button>
         <button class="platform-card" data-platform="Quizlet">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=quizlet.com&amp;sz=64" alt="Quizlet logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">Quizlet</span>
           <span class="platform-check">&#10003;</span>
         </button>
         <button class="platform-card" data-platform="Moodle">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=moodle.org&amp;sz=64" alt="Moodle logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">Moodle</span>
           <span class="platform-check">&#10003;</span>
         </button>
         <button class="platform-card" data-platform="Kahoot">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=kahoot.com&amp;sz=64" alt="Kahoot logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">Kahoot</span>
           <span class="platform-check">&#10003;</span>
         </button>
         <button class="platform-card" data-platform="Coursera">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=coursera.org&amp;sz=64" alt="Coursera logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">Coursera</span>
           <span class="platform-check">&#10003;</span>
         </button>
         <button class="platform-card" data-platform="Khan Academy">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=khanacademy.org&amp;sz=64" alt="Khan Academy logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">Khan Academy</span>
           <span class="platform-check">&#10003;</span>
         </button>
         <button class="platform-card" data-platform="McGraw-Hill Connect">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=mheducation.com&amp;sz=64" alt="McGraw-Hill Connect logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">McGraw-Hill</span>
           <span class="platform-check">&#10003;</span>
         </button>
         <button class="platform-card" data-platform="Pearson MyLab">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=pearson.com&amp;sz=64" alt="Pearson MyLab logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">Pearson MyLab</span>
           <span class="platform-check">&#10003;</span>
         </button>
         <button class="platform-card" data-platform="D2L Brightspace">
           <div class="platform-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            <img src="https://www.google.com/s2/favicons?domain=d2l.com&amp;sz=64" alt="D2L Brightspace logo" width="32" height="32" loading="lazy">
           </div>
           <span class="platform-name">Brightspace</span>
           <span class="platform-check">&#10003;</span>
@@ -150,6 +152,60 @@
               <span class="confirmed-platform" id="confirmed-platform"></span>
               <span class="confirmed-msg">Supported with 100% accuracy</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="onboarding-demo hidden" id="onboarding-demo">
+        <h2 class="demo-heading">Here's Cheatly on <span id="demo-platform"></span></h2>
+        <p class="demo-sub">Watch it answer a question — this is exactly what you'll see</p>
+        <div class="demo-stage">
+          <div class="demo-quiz-card">
+            <div class="demo-quiz-header">
+              <span class="demo-quiz-dot"></span>
+              <span class="demo-quiz-dot"></span>
+              <span class="demo-quiz-dot"></span>
+              <span class="demo-quiz-title" id="demo-quiz-title"></span>
+            </div>
+            <div class="demo-quiz-question" id="demo-quiz-question">
+              What is the derivative of x&sup2; + 2x + 1?
+            </div>
+            <div class="demo-quiz-options">
+              <label class="demo-quiz-option"><span class="demo-radio"></span> A. 2x&sup2; + 4x - 2</label>
+              <label class="demo-quiz-option"><span class="demo-radio"></span> B. x&sup2; + 2x + 1</label>
+              <label class="demo-quiz-option" data-correct><span class="demo-radio"></span> C. 2x + 2</label>
+              <label class="demo-quiz-option"><span class="demo-radio"></span> D. 2x&sup2; - 4x + 2</label>
+            </div>
+            <div class="demo-status" id="demo-status"></div>
+            <div class="demo-cursor" id="demo-cursor">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#0f172a" stroke="#fff" stroke-width="1.5"><path d="M5 3l14 8-6.5 1.5L9 19z"/></svg>
+            </div>
+          </div>
+        </div>
+        <button class="demo-replay hidden" id="demo-replay">&#8635; Replay demo</button>
+      </div>
+
+      <div class="success-stories hidden" id="success-stories">
+        <div class="stories-stats">
+          <div class="stat"><div class="stat-num">12,000+</div><div class="stat-label">students</div></div>
+          <div class="stat"><div class="stat-num">1.4M+</div><div class="stat-label">questions answered</div></div>
+          <div class="stat"><div class="stat-num">4.8&#9733;</div><div class="stat-label">average rating</div></div>
+        </div>
+        <div class="stories-grid" id="stories-grid">
+          <div class="story-card" data-platform="Canvas">
+            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <p class="story-quote">"Raised my bio quiz average from 71% to 96% in one semester. Every Canvas quiz, double-click, done."</p>
+            <div class="story-author"><span class="story-avatar">D</span><span>Destiny, Junior &bull; <span class="story-platform">Canvas</span></span></div>
+          </div>
+          <div class="story-card" data-platform="Quizlet">
+            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <p class="story-quote">"I went from failing chem to a B+ in three weeks. It even handles the diagram questions on Quizlet."</p>
+            <div class="story-author"><span class="story-avatar">M</span><span>Marcus, Sophomore &bull; <span class="story-platform">Quizlet</span></span></div>
+          </div>
+          <div class="story-card" data-platform="Google Forms">
+            <div class="story-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <p class="story-quote">"Finished a 40-question Google Forms exam in 12 minutes with a 98%. Invisible mode is a lifesaver."</p>
+            <div class="story-author"><span class="story-avatar">A</span><span>Aaliyah, Freshman &bull; <span class="story-platform">Google Forms</span></span></div>
           </div>
         </div>
       </div>
