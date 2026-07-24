@@ -112,6 +112,8 @@ function showDemo(platform) {
 
   demoSection.classList.remove('hidden');
   storiesSection.classList.remove('hidden');
+  const winsSection = document.getElementById('onboarding-wins');
+  if (winsSection) winsSection.classList.remove('hidden');
   ctaSection.classList.remove('hidden');
   setStep(1);
   demoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });

@@ -17,6 +17,29 @@
   margin: 0 auto 48px;
 }
 
+.onboarding-wins {
+  margin-top: 56px;
+  text-align: center;
+}
+
+.onboarding-wins.hidden {
+  display: none;
+}
+
+.wins-inline-heading {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.wins-inline-sub {
+  color: var(--text-secondary, #94a3b8);
+  font-size: 15px;
+  max-width: 520px;
+  margin: 0 auto 32px;
+}
+
 .wins-carousel {
   display: flex;
   align-items: center;

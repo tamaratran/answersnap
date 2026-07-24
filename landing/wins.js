@@ -34,7 +34,10 @@
     if (autoTimer) clearInterval(autoTimer);
     if (hovering) return;
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    autoTimer = setInterval(() => goTo(index + 1), 5000);
+    autoTimer = setInterval(() => {
+      if (!viewport.clientWidth) return;
+      goTo(index + 1);
+    }, 5000);
   }
 
   prevBtn.addEventListener('click', () => {
